@@ -3,6 +3,7 @@ import numpy
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import time
+import sys
 
 def getData(filename):
     datafile = ff.FortranFile(filename)
@@ -29,27 +30,22 @@ def extractBxField(step):
 
 fig = plt.figure()
 
-ax1 = fig.add_subplot(2,1,1,xlim=(0,500), ylim=(-0.8,0.8))
-line1, = ax1.plot([],[])
-
-ax2 = fig.add_subplot(2,1,2,xlim=(0,500), ylim=(-0.8,0.8))
-line2, = ax2.plot([],[])
-
-data1 = map(extractBxField, getData('c.b1.dat'))
-data2 = map(extractBxField, getData('c.b1.dat_5'))
+numplots = len(sys.argv)-1
+all_ax = [fig.add_subplot(numplots,1,i,xlim=(0,500), ylim=(-0.8,0.8)) for i in range(numplots)]
+all_lines = [ax.plot([],[])[0] for ax in all_ax]
+all_data = [map(extractBxField, getData(filename)) for filename in sys.argv[1:]]
 
 def init():
-    line1.set_data([],[])
-    line2.set_data([],[])
-    return line1,
+    for line in all_lines:
+        line.set_data([],[])
+    return all_lines[0],
 
 def update(i):
-    line1.set_data(range(len(data1[i])),data1[i])
-    line2.set_data(range(len(data2[i])),data2[i])
-    return line1, line2,
+    for line, data in zip(all_lines,all_data):
+        line.set_data(range(len(data[i])), data[i])
+    return tuple(all_lines)
 
-
-animate = animation.FuncAnimation(fig, update, init_func=init, frames=len(data1), interval=100, blit=True)
+animate = animation.FuncAnimation(fig, update, init_func=init, frames=len(all_data[0]), interval=100, blit=True)
 
 #plt.ion()
 plt.show()
