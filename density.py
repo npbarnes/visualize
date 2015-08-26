@@ -76,11 +76,10 @@ plt.colorbar()
 # TODO: Play/Pause button
 # TODO: Save image, save animation
 # TODO: Checkboxes for: Density, velocity streamlines, B field streamlines, etc.
-# TODO: arrange everything so it's not overlapping
-rax = plt.axes([0.05,0.7,0.15,0.15])
+rax = plt.axes([0.01,0.7,0.07,0.15])
 radio = RadioButtons(rax, ('xy','xz','yz'))
 
-axtime = plt.axes([0.25,0.1,0.65,0.03])
+axtime = plt.axes([0.25,0.03,0.65,0.03])
 stime = Slider(axtime, 'Time', 0, 19, valinit=t0)
 
 # UI update functions
@@ -93,7 +92,7 @@ def radioFunc(s):
     elif(s0 == 'xz'):
         obj.set_extent([0,60,0,zrange])
     elif(s0 == 'yz'):
-        obj.set_extent([0,ny,0,nz])
+        obj.set_extent([0,ny,0,zrange])
     plt.draw()
 radio.on_clicked(radioFunc)
 
