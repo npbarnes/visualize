@@ -47,21 +47,4 @@ def update(i):
 
 animate = animation.FuncAnimation(fig, update, init_func=init, frames=len(all_data[0]), interval=100, blit=True)
 
-#plt.ion()
 plt.show()
-
-#for step1, step2 in zip(data1,data2):
-#    plt.subplot(211)
-#    plt.plot(range(len(step1)),step1)
-#    plt.axis([0,500,-0.8,0.8])
-#    plt.draw()
-#
-#    plt.subplot(212)
-#    plt.plot(range(len(step2)),step2)
-#    plt.axis([0,500,-0.8,0.8])
-#    plt.draw()
-#
-#    time.sleep(0.01)
-#    plt.cla()
-#    plt.subplot(211)
-#    plt.cla()
