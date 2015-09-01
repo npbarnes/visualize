@@ -81,11 +81,17 @@ class hybridReader:
     # Construct a 2-d slice to view.
     def getSlice(self,t,axs):
         if(axs == 'xy'):
-            #return data[t,40:100,:,nz/2]
-            return [[self.data[t][i][j][self.nz*3/2] for i in range(40,100)] for j in range(self.ny)]
+            return np.array([[self.data[t][i][j][self.nz*3/2] for i in range(40,100)] for j in range(self.ny)])
         elif(axs == 'xz'):
-            #return data[t,40:100,ny/2,:]
-            return [[self.data[t][i][self.ny/2][j] for i in range(40,100)] for j in range(self.zrange)]
+            return np.array([[self.data[t][i][self.ny/2][j] for i in range(40,100)] for j in range(self.zrange)])
         elif(axs == 'yz'):
-            #return data[t,nx/2,:,:]
-            return [[self.data[t][self.nx/2][i][j] for i in range(self.ny)] for j in range(self.zrange)]
+            return np.array([[self.data[t][self.nx/2][i][j] for i in range(self.ny)] for j in range(self.zrange)])
+
+    def getProjection(self,t,axs):
+        ret = np.rollaxis(self.getSlice(t,axs),2,0)
+        if(axs == 'xy'):
+            return (ret[0],ret[1]) 
+        elif(axs == 'xz'):
+            return (ret[0],ret[2]) 
+        elif(axs == 'yz'):
+            return (ret[1],ret[2]) 

@@ -15,6 +15,9 @@ Dreader = hr.hybridReader("c.np_3d_",nx,ny,nz,numProc)
 zrange = Dreader.zrange
 getSlice = Dreader.getSlice
 
+Breader = hr.hybridReader("c.up_3d_",nx,ny,nz,numProc,True)
+getProjection = Breader.getProjection
+
 # Set initial slice and time
 s0 = 'xy'
 t0 = 0
@@ -24,6 +27,9 @@ t0 = 0
 fig, ax = plt.subplots()
 density = plt.imshow(getSlice(t0,s0),interpolation='nearest',origin='lower') 
 plt.colorbar()
+
+xcomp, ycomp = getProjection(t0,s0)
+Bfield = plt.quiver(np.arange(60),np.arange(ny),np.zeros(60,ny),ycomp, color='white')
 
 # Setup UI
 # TODO: Play/Pause button
@@ -40,6 +46,8 @@ def radioFunc(s):
     global s0 
     s0 = s
     density.set_data(getSlice(t0,s0))
+    xcomp, ycomp = getProjection(t0,s0)
+    Bfield.set_UVC(xcomp,ycomp)
     if(s0 == 'xy'):
         density.set_extent([0,60,0,ny])
     elif(s0 == 'xz'):
@@ -54,6 +62,9 @@ def update(val):
     t0 = int(stime.val)
 
     density.set_data(getSlice(t0,s0))
+
+    xcomp, ycomp = getProjection(t0,s0)
+    Bfield.set_UVC(xcomp,ycomp)
 
     plt.draw()
 stime.on_changed(update)
