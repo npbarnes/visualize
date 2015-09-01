@@ -41,7 +41,7 @@ class hybridReader:
                     for proc in rolledlst:
                         tmp.append(proc[i,c,:,:,:-2])
                     # flatten
-                    tmp = np.reshape(tmp,[self.nx,self.ny,self.numProc*self.nz])
+                    tmp = np.reshape(tmp,[self.nx,self.ny,self.numProc*(self.nz-2)])
                     # timestep is ready to be returned
                     ret[c].append(tmp)
             #put it in the correct order (t,x,y,z,c)
