@@ -27,33 +27,26 @@ class hybridReader:
         return len(self.datalst[0])
 
 
-    # TODO: This function is very inefficient, make it faster.
     # TODO: Eliminate code duplication.
     def shapeData(self):
         if(self.isVec):
-            ret = np.empty(shape=(self.timesteps,self.nx,self.ny,self.zrange,3))
-
             # convert flattened data into 3d array of vectors
             # shapes data from (p,t,xyzc) to (p,t,x,y,z,c)
             redatalst = np.reshape(self.datalst,[self.numProc,self.timesteps,self.nx,self.ny,self.nz,3], 'F')
+            cutOverlap = redatalst[:,:,:,:,:-2,:]
             # (p,t,x,y,z,c) -> (t,x,y,p,z,c)
-            rolledlst = np.rollaxis(redatalst,0,4)
+            rolledlst = np.rollaxis(cutOverlap,0,4)
             # (p,t,x,y,zrange,c)
-            return np.reshape(rolledlst,[self.timesteps,self.nx,self.ny,self.numProc * self.nz,3])
+            return np.reshape(rolledlst,[self.timesteps,self.nx,self.ny,self.zrange,3])
         else:
-            ret = []
-            for i in range(self.timesteps):
-                tmp = []
-                for proc in self.datalst:
-                        tmp.append(proc[i][:-2*self.nx*self.ny])
-                # flatten
-                tmp = [val for xyz in tmp for val in xyz]
-                # reshape to 3-d grid
-                tmp = np.reshape(tmp, [self.nx,self.ny,self.zrange],'F').tolist()
-                # timestep is ready to be returned
-                ret.append(tmp)
-
-        return np.array(ret)
+            # convert flattened data into 3d array of vectors
+            # shapes data from (p,t,xyz) to (p,t,x,y,z)
+            redatalst = np.reshape(self.datalst,[self.numProc,self.timesteps,self.nx,self.ny,self.nz], 'F')
+            cutOverlap = redatalst[:,:,:,:,:-2]
+            # (p,t,x,y,z) -> (t,x,y,p,z)
+            rolledlst = np.rollaxis(cutOverlap,0,4)
+            # (p,t,x,y,zrange)
+            return np.reshape(rolledlst,[self.timesteps,self.nx,self.ny,self.zrange])
 
     def _get3dData(self):
         return self.shapeData()
