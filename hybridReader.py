@@ -31,23 +31,15 @@ class hybridReader:
     # TODO: Eliminate code duplication.
     def shapeData(self):
         if(self.isVec):
-            ret = [[],[],[]]
-            # Roll vector coordinate axis to the space before cell x coordinate.
-            redatalst = np.reshape(self.datalst,[self.numProc,self._getTimesteps(),self.nx,self.ny,self.nz,3], 'F')
-            rolledlst = np.rollaxis(redatalst,5,2)
-            for i in range(self.timesteps):
-                for c in range(3):
-                    tmp = []
-                    for proc in rolledlst:
-                        tmp.append(proc[i,c,:,:,:-2])
-                    # flatten
-                    tmp = np.reshape(tmp,[self.nx,self.ny,self.numProc*(self.nz-2)])
-                    # timestep is ready to be returned
-                    ret[c].append(tmp)
-            #put it in the correct order (t,x,y,z,c)
-            #TODO: fix this mixup with np arrays and lists.
-            #      There's no reason to convert to a list and then right back.
-            ret = np.rollaxis(np.array(ret),0,5).tolist()
+            ret = np.empty(shape=(self.timesteps,self.nx,self.ny,self.zrange,3))
+
+            # convert flattened data into 3d array of vectors
+            # shapes data from (p,t,xyzc) to (p,t,x,y,z,c)
+            redatalst = np.reshape(self.datalst,[self.numProc,self.timesteps,self.nx,self.ny,self.nz,3], 'F')
+            # (p,t,x,y,z,c) -> (t,x,y,p,z,c)
+            rolledlst = np.rollaxis(redatalst,0,4)
+            # (p,t,x,y,zrange,c)
+            return np.reshape(rolledlst,[self.timesteps,self.nx,self.ny,self.numProc * self.nz,3])
         else:
             ret = []
             for i in range(self.timesteps):
