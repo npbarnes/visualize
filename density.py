@@ -29,7 +29,7 @@ density = plt.imshow(getSlice(t0,s0),interpolation='nearest',origin='lower')
 plt.colorbar()
 
 xcomp, ycomp = getProjection(t0,s0)
-Bfield = plt.quiver(np.arange(60),np.arange(ny),np.zeros(60,ny),ycomp, color='white')
+Bfield = plt.quiver(np.arange(60),np.arange(ny),xcomp,ycomp, color='white')
 
 # Setup UI
 # TODO: Play/Pause button
