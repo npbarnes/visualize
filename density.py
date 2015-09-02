@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import hybridReader as hr
 from matplotlib.widgets import Slider, RadioButtons
+from matplotlib.colors import Normalize
 
 nx = 119
 ny = 59
@@ -26,6 +27,8 @@ t0 = 0
 # Make initial plot
 fig, ax = plt.subplots()
 density = plt.imshow(getSlice(t0,s0),interpolation='nearest',origin='lower') 
+density.set_cmap('gnuplot2')
+density.set_norm(Normalize(vmin=0,vmax=5*pow(10,13)))
 plt.colorbar()
 
 xcomp, ycomp = getProjection(t0,s0)
@@ -38,8 +41,11 @@ Bfield = plt.quiver(np.arange(60),np.arange(ny),xcomp,ycomp, color='white', scal
 rax = plt.axes([0.01,0.7,0.07,0.15])
 radio = RadioButtons(rax, ('xy','xz','yz'))
 
-axtime = plt.axes([0.1,0.03,0.65,0.03])
+axtime = plt.axes([0.1,0.04,0.65,0.03])
 stime = Slider(axtime, 'Time', 0, 34, valinit=t0)
+
+axscale = plt.axes([0.1,0.01,0.65,0.03])
+sscale = Slider(axscale, 'Scale', 0, 10, valinit=5)
 
 # UI update functions
 def radioUpdate(s):
@@ -69,5 +75,10 @@ def timeUpdate(val):
     plt.draw()
 stime.on_changed(timeUpdate)
 
+def scaleUpdate(val):
+    val=max(val,1)
+    density.set_norm(Normalize(vmax=val*pow(10,13)))
+    plt.draw()
+sscale.on_changed(scaleUpdate)
 # Show figure
 plt.show()
