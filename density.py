@@ -38,11 +38,11 @@ Bfield = plt.quiver(np.arange(60),np.arange(ny),xcomp,ycomp, color='white', scal
 rax = plt.axes([0.01,0.7,0.07,0.15])
 radio = RadioButtons(rax, ('xy','xz','yz'))
 
-axtime = plt.axes([0.25,0.03,0.65,0.03])
+axtime = plt.axes([0.1,0.03,0.65,0.03])
 stime = Slider(axtime, 'Time', 0, 34, valinit=t0)
 
 # UI update functions
-def radioFunc(s):
+def radioUpdate(s):
     global s0 
     s0 = s
     density.set_data(getSlice(t0,s0))
@@ -55,9 +55,9 @@ def radioFunc(s):
     elif(s0 == 'yz'):
         density.set_extent([0,ny,0,zrange])
     plt.draw()
-radio.on_clicked(radioFunc)
+radio.on_clicked(radioUpdate)
 
-def update(val):
+def timeUpdate(val):
     global t0 
     t0 = int(stime.val)
 
@@ -67,7 +67,7 @@ def update(val):
     Bfield.set_UVC(xcomp,ycomp)
 
     plt.draw()
-stime.on_changed(update)
+stime.on_changed(timeUpdate)
 
 # Show figure
 plt.show()
