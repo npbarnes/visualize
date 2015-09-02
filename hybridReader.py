@@ -66,7 +66,7 @@ class hybridReader:
     # Construct a 2-d slice to view.
     def getSlice(self,t,axs):
         if(axs == 'xy'):
-            return np.array([[self.data[t][i][j][self.nz*3/2] for i in range(40,100)] for j in range(self.ny)])
+            return np.array([[self.data[t][i][j][self.zrange/2] for i in range(40,100)] for j in range(self.ny)])
         elif(axs == 'xz'):
             return np.array([[self.data[t][i][self.ny/2][j] for i in range(40,100)] for j in range(self.zrange)])
         elif(axs == 'yz'):
