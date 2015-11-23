@@ -7,10 +7,10 @@ from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
 from matplotlib.colors import Normalize
 import matplotlib.animation as animation
 
-nx = 119
-ny = 59
-nz = 13
-numProc = 4
+nx = 159
+ny = 109
+nz = 11
+numProc = 24
 
 
 Dreader = hr.hybridReader("c.np_3d_",nx,ny,nz,numProc)

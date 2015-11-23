@@ -20,8 +20,8 @@ class hybridReader:
 
     def _getDatalst(self):
         # taken in reversed order to make them go from top to bottom.
-        return np.array([self._grabData("data/"+self.filename+str(i)+".dat") 
-                            for i in reversed(range(11,11+self.numProc))])
+        return np.array([self._grabData("./"+self.filename+str(i)+".dat") 
+                            for i in reversed(range(1,1+self.numProc))])
 
     def _getTimesteps(self):
         return len(self.datalst[0])
