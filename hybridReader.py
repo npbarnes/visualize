@@ -64,16 +64,19 @@ class hybridReader:
         self.data = self._get3dData()
 
     # Construct a 2-d slice to view.
-    def getSlice(self,t,axs):
+    def getSlice(self,t,axs, depth=0.5):
         if(axs == 'xy'):
-            return np.array([[self.data[t][i][j][self.zrange/2] for i in range(40,100)] for j in range(self.ny)])
+            return np.array([[self.data[t][i][j][depth*(self.zrange-1)] for i in range(40,100)]
+                                                                        for j in range(self.ny)])
         elif(axs == 'xz'):
-            return np.array([[self.data[t][i][self.ny/2][j] for i in range(40,100)] for j in range(self.zrange)])
+            return np.array([[self.data[t][i][depth*(self.ny-1)][j] for i in range(40,100)] 
+                                                                    for j in range(self.zrange)])
         elif(axs == 'yz'):
-            return np.array([[self.data[t][self.nx/2][i][j] for i in range(self.ny)] for j in range(self.zrange)])
+            return np.array([[self.data[t][depth*(self.nx-1)][i][j] for i in range(self.ny)] 
+                                                                    for j in range(self.zrange)])
 
-    def getProjection(self,t,axs):
-        ret = np.rollaxis(self.getSlice(t,axs),2,0)
+    def getProjection(self,t,axs, depth=0.5):
+        ret = np.rollaxis(self.getSlice(t,axs,depth),2,0)
         if(axs == 'xy'):
             return (ret[0],ret[1]) 
         elif(axs == 'xz'):
