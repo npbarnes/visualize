@@ -20,8 +20,8 @@ class hybridReader:
 
     def _getDatalst(self):
         # taken in reversed order to make them go from top to bottom.
-        return np.array([self._grabData("./"+self.filename+str(i)+".dat") 
-                            for i in reversed(range(1,1+self.numProc))])
+        return np.array([self._grabData("./data/"+self.filename+str(i)+".dat") 
+                    for i in reversed(range(self.numProc/2 - self.disprange,self.numProc/2+self.disprange+1))])
 
     def _getTimesteps(self):
         return len(self.datalst[0])
@@ -32,7 +32,7 @@ class hybridReader:
         if(self.isVec):
             # convert flattened data into 3d array of vectors
             # shapes data from (p,t,xyzc) to (p,t,x,y,z,c)
-            redatalst = np.reshape(self.datalst,[self.numProc,self.timesteps,self.nx,self.ny,self.nz,3], 'F')
+            redatalst = np.reshape(self.datalst,[2*self.disprange+1,self.timesteps,self.nx,self.ny,self.nz,3], 'F')
             cutOverlap = redatalst[:,:,:,:,:-2,:]
             # (p,t,x,y,z,c) -> (t,x,y,p,z,c)
             rolledlst = np.rollaxis(cutOverlap,0,4)
@@ -41,7 +41,7 @@ class hybridReader:
         else:
             # convert flattened data into 3d array of vectors
             # shapes data from (p,t,xyz) to (p,t,x,y,z)
-            redatalst = np.reshape(self.datalst,[self.numProc,self.timesteps,self.nx,self.ny,self.nz], 'F')
+            redatalst = np.reshape(self.datalst,[2*self.disprange+1,self.timesteps,self.nx,self.ny,self.nz], 'F')
             cutOverlap = redatalst[:,:,:,:,:-2]
             # (p,t,x,y,z) -> (t,x,y,p,z)
             rolledlst = np.rollaxis(cutOverlap,0,4)
@@ -58,7 +58,8 @@ class hybridReader:
         self.nz = nz
         self.numProc = numProc
         self.isVec = isVec
-        self.zrange = (nz-2)*numProc
+        self.disprange = 2
+        self.zrange = (nz-2)*(2*self.disprange+1)
         self.datalst = self._getDatalst()
         self.timesteps = self._getTimesteps()
         self.data = self._get3dData()
