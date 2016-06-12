@@ -1,4 +1,4 @@
-# Copyright 2008, 2009 Neil Martinsen-Burrell
+# Copyright 2008-2010 Neil Martinsen-Burrell
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ same integer as before.
 Examples
 --------
 
-To use the default endian and size settings, one can just do::
+To use the default endian and precision settings, one can just do::
     >>> f = FortranFile('filename')
     >>> x = f.readReals()
 
@@ -48,26 +48,26 @@ integers.
 
 __docformat__ = "restructuredtext en"
 
-import struct
 import numpy
-import os
 
 class FortranFile(file):
 
     """File with methods for dealing with fortran unformatted data files"""
 
     def _get_header_length(self):
-        return struct.calcsize(self._header_prec)
+        return numpy.dtype(self._header_prec).itemsize
     _header_length = property(fget=_get_header_length)
 
     def _set_endian(self,c):
-        """Set endian to big (c='>') or little (c='<') or native (c='@')
+        """Set endian to big (c='>') or little (c='<') or native (c='=')
 
         :Parameters:
           `c` : string
             The endian-ness to use when reading from this file.
         """
         if c in '<>@=':
+            if c == '@':
+                c = '='
             self._endian = c
         else:
             raise ValueError('Cannot set endian-ness')
@@ -126,14 +126,15 @@ class FortranFile(file):
             data += read_data
 
     def _read_check(self):
-        return struct.unpack(self.ENDIAN+self.HEADER_PREC,
-                             self._read_exactly(self._header_length)
-                            )[0]
+        return numpy.fromstring(self._read_exactly(self._header_length),
+                                dtype=self.ENDIAN+self.HEADER_PREC
+                               )[0]
 
     def _write_check(self, number_of_bytes):
         """Write the header for the given number of bytes"""
-        self.write(struct.pack(self.ENDIAN+self.HEADER_PREC,
-                               number_of_bytes))
+        self.write(numpy.array(number_of_bytes, 
+                               dtype=self.ENDIAN+self.HEADER_PREC,).tostring()
+                  )
 
     def readRecord(self):
         """Read a single fortran record"""
@@ -220,7 +221,7 @@ class FortranFile(file):
             raise ValueError('Not an appropriate precision')
 
         data_str = self.readRecord()
-        return numpy.fromstring(data_str, dtype=_numpy_precisions[prec])
+        return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
 
     def readBackReals(self, prec='f'):
         """Read in an array of real numbers from before the current file position.
@@ -256,15 +257,9 @@ class FortranFile(file):
         if prec not in self._real_precisions:
             raise ValueError('Not an appropriate precision')
 
-        # Don't use writeRecord to avoid having to form a
-        # string as large as the array of numbers
-        length_bytes = len(reals)*struct.calcsize(prec)
-        self._write_check(length_bytes)
-        _fmt = self.ENDIAN + prec
-        for r in reals:
-            self.write(struct.pack(_fmt,r))
-        self._write_check(length_bytes)
-
+        nums = numpy.array(reals, dtype=self.ENDIAN+prec)
+        self.writeRecord(nums.tostring())
+    
     _int_precisions = 'hilq'
 
     def readInts(self, prec='i'):
@@ -278,17 +273,11 @@ class FortranFile(file):
             values are 'h', 'i', 'l' and 'q'
 
         """
-        _numpy_precisions = {'h': numpy.int16,
-                             'i': numpy.int32,
-                             'l': numpy.int32,
-                             'q': numpy.int64
-                            }
-
         if prec not in self._int_precisions:
             raise ValueError('Not an appropriate precision')
 
         data_str = self.readRecord()
-        return numpy.fromstring(data_str, dtype=_numpy_precisions[prec])
+        return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
 
     def writeInts(self, ints, prec='i'):
         """Write an array of integers in given precision
@@ -303,22 +292,10 @@ class FortranFile(file):
         if prec not in self._int_precisions:
             raise ValueError('Not an appropriate precision')
 
-        # Don't use writeRecord to avoid having to form a
-        # string as large as the array of numbers
-        length_bytes = len(ints)*struct.calcsize(prec)
-        self._write_check(length_bytes)
-        _fmt = self.ENDIAN + prec
-        for item in ints:
-            self.write(struct.pack(_fmt,item))
-        self._write_check(length_bytes)
+        nums = numpy.array(ints, dtype=self.ENDIAN+prec)
+        self.writeRecord(nums.tostring())
 
-    def readStuff(self, stuff):
+    def readOther(self, dtype):
         data_str = self.readRecord()
-        ret = []
-        pos = 0
-        for thing in stuff:
-            fmt = self.ENDIAN+str(1)+thing
-            ret.append(struct.unpack_from(fmt, data_str, offset=pos)[0])
-            pos = pos + struct.calcsize(fmt)
-        return ret
-            
+        dtype = numpy.dtype(dtype)
+        return numpy.fromstring(data_str, dtype=dtype)
