@@ -86,6 +86,20 @@ class HybridReader2:
     def _cut_overlap(self,a):
         return a[:-2*self.para['nx']*self.para['ny']]
 
+    def get_saved_timesteps(self):
+        filename = self.filenames()[0]
+        f = ff.FortranFile(join(self.prefix,filename))
+        ms = []
+        while(True):
+            try:
+                ms.append(f.readReals()[0])
+            except IOError:
+                break
+            f.skipRecord()
+            
+        f.close()
+        return ms
+
     def get_last_timestep(self):
         paths = map(partial(join,self.prefix),self.sort_filenames())
         handles = map(ff.FortranFile,paths)
