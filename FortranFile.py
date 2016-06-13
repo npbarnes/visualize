@@ -49,6 +49,7 @@ integers.
 __docformat__ = "restructuredtext en"
 
 import numpy
+import os
 
 class FortranFile(file):
 
