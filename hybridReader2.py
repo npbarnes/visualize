@@ -31,34 +31,34 @@ class HybridReader2:
         para.update(zip(r2.dtype.names,r2[0]))
 
         out_dir = f.readString()
-        para.update(('out_dir',out_dir))
+        para.update({'out_dir':out_dir})
 
         r3 = f.readReals()
-        para.update(('vtop',r3[0]),('vbottom',r3[1]))
+        para.update([('vtop',r3[0]),('vbottom',r3[1])])
 
-        Ni_max = para.readInts()[0]
-        para.update(('Ni_max',Ni_max))
+        Ni_max = f.readInts()[0]
+        para.update({'Ni_max':Ni_max})
 
-        r4 = f.readOther([   ('mproton',np.float64),
+        r4 = f.readOther([  ('mproton',np.float64),
                             ('mpu',np.float64),
                             ('mheavy',np.float32)])
         para.update(zip(r4.dtype.names,r4[0]))
 
         r5 = f.readReals()
-        para.update(('np_top',r5[0]),('np_bottom',r5[1]))
+        para.update([('np_top',r5[0]),('np_bottom',r5[1])])
 
         r6 = f.readReals()
-        para.update(('b0_top',r6[0]),('b0_bottom',r6[1]))
+        para.update([('b0_top',r6[0]),('b0_bottom',r6[1])])
 
         r7 = f.readReals()
-        para.update(('vth_top',r7[0]),('vth_bottom',r7[1]))
+        para.update([('vth_top',r7[0]),('vth_bottom',r7[1])])
 
         r8 = f.readOther([  ('alpha',np.float64),
                             ('beta',np.float32)])
         para.update(zip(r8.dtype.names,r8[0]))
 
         RIo = f.readReals()[0]
-        para.update(('RIo',RIo))
+        para.update({'RIo':RIo})
 
         return para
 
