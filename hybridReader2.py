@@ -14,6 +14,7 @@ class HybridReader2:
         self.para = self._getParameters()
 
     def _getParameters(self):
+        # Read directly from para.dat
         f = ff.FortranFile(join(self.prefix,'para.dat'))
         r1 = f.readOther([  ('nx',np.int32),
                             ('ny',np.int32),
@@ -59,6 +60,13 @@ class HybridReader2:
 
         RIo = f.readReals()[0]
         para.update({'RIo':RIo})
+
+        # Compute additional useful parameters
+        paths = map(partial(join,self.prefix),self.sort_filenames())
+        zrange = (para['nz']-2)*len(paths)
+        saved_steps = para['nt']/para['nout']
+        para.update({'zrange':zrange, 'saved_steps':saved_steps})
+
 
         return para
 
