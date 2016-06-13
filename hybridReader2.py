@@ -14,7 +14,7 @@ class HybridReader2:
         self.para = self._getParameters()
 
     def _getParameters(self):
-        f = ff(join(self.prefix,'para.dat'))
+        f = ff.FortranFile(join(self.prefix,'para.dat'))
         r1 = f.readOther([  ('nx',np.int32),
                             ('ny',np.int32),
                             ('nz',np.int32),
