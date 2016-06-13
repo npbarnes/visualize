@@ -280,6 +280,23 @@ class FortranFile(file):
         data_str = self.readRecord()
         return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
 
+    def readBackInts(self, prec='i'):
+        """Read an array of integers.
+
+        Parameters
+        ----------
+        prec : character, optional
+            Specify the precision of the data to be read using
+            character codes from Python's struct module.  Possible
+            values are 'h', 'i', 'l' and 'q'
+
+        """
+        if prec not in self._int_precisions:
+            raise ValueError('Not an appropriate precision')
+
+        data_str = self.readBackRecord()
+        return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
+
     def writeInts(self, ints, prec='i'):
         """Write an array of integers in given precision
 
