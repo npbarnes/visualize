@@ -117,9 +117,26 @@ class HybridReader2:
         paths = map(partial(join,self.prefix),self.sort_filenames())
         handles = map(ff.FortranFile,paths)
 
-        #TODO:
+        steps = self.get_saved_timesteps()
+        nx = self.para['nx']
+        ny = self.para['ny']
+        nz = self.para['nz']
+        zrange = (nz-2)*len(paths)
+        dtype = np.dtype([('step',np.int32),('time',np.float32),('data',np.float32,(nx,ny,zrange))])
+        ret = np.empty(len(steps),dtype=dtype)
 
+        for n in range(len(steps)):
+            # First skip the time step record
+            map(lambda x: x.skipRecord(),handles)
+            # (xyz)
+            flat_data = np.concatenate(map(lambda x:self._cut_overlap(x.readReals()), handles))
+            # (x,y,z)
+            data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],(self.para['nz']-2)*len(paths)],'F')
 
+            ret[n] = (steps[n],self.para['dt']*steps[n],data)
+
+        map(lambda x: x.close(), handles)
+        return ret
 
 if __name__ == "__main__":
 #    import matplotlib.pyplot as plt
