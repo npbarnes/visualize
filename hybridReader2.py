@@ -108,7 +108,10 @@ class HybridReader2:
         flat_data = np.concatenate(map(lambda x:self._cut_overlap(x.readBackReals()), handles))
         # (x,y,z)
         data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],(self.para['nz']-2)*len(paths)],'F')
-        return data
+
+        m = handles[0].readBackInts()[0]
+        map(lambda x: x.close(), handles)
+        return m, self.para['dt']*m, data
 
     def get_all_timesteps(self):
         paths = map(partial(join,self.prefix),self.sort_filenames())
