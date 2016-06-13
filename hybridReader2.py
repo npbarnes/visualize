@@ -139,17 +139,17 @@ class HybridReader2:
         return ret
 
 if __name__ == "__main__":
-#    import matplotlib.pyplot as plt
-#    from matplotlib.colors import Normalize
-#    import colormaps as cmaps
-#
-#    plt.register_cmap(name='viridis', cmap=cmaps.viridis)
-#    plt.register_cmap(name='inferno', cmap=cmaps.inferno)
-#    plt.register_cmap(name='plasma', cmap=cmaps.plasma)
-#
-    h = HybridReader2('databig8','np_3d')
-    h.get_last_timestep()
-#    boop = plt.imshow(h.get_last_timestep()[:,h.para['ny']/2,:].transpose(),origin='lower')
-#    boop.set_cmap(cmaps.viridis)
-#    boop.set_norm(Normalize(vmin=0,vmax=10*pow(10,13)))
-#    plt.colorbar()
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import Normalize
+    import colormaps as cmaps
+
+    plt.register_cmap(name='viridis', cmap=cmaps.viridis)
+    plt.register_cmap(name='inferno', cmap=cmaps.inferno)
+    plt.register_cmap(name='plasma', cmap=cmaps.plasma)
+
+    h = HybridReader2('databig6','np_3d')
+    boop = plt.imshow(h.get_last_timestep()[-1][:,h.para['ny']/2,:].transpose(),origin='lower')
+    boop.set_cmap(cmaps.viridis)
+    boop.set_norm(Normalize(vmin=0,vmax=10*pow(10,13)))
+    plt.colorbar()
+    plt.show()
