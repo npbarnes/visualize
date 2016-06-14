@@ -11,6 +11,10 @@ nx = 159
 ny = 109
 nz = 11
 numProc = 24
+import colormaps as cmaps
+plt.register_cmap(name='viridis', cmap=cmaps.viridis)
+plt.register_cmap(name='inferno', cmap=cmaps.inferno)
+plt.register_cmap(name='plasma', cmap=cmaps.plasma)
 
 
 Dreader = hr.hybridReader("c.np_3d_",nx,ny,nz,numProc)
