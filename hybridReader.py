@@ -16,11 +16,11 @@ class hybridReader:
             except IOError:
                 break
 
-        return np.array(data)
+        return data
 
     def _getDatalst(self):
         # taken in reversed order to make them go from top to bottom.
-        return np.array([self._grabData("./data/"+self.filename+str(i)+".dat") 
+        return np.array([self._grabData("./tmp/"+self.filename+str(i)+".dat") 
                     for i in reversed(range(self.numProc/2 - self.disprange,self.numProc/2+self.disprange+1))])
 
     def _getTimesteps(self):
@@ -41,6 +41,7 @@ class hybridReader:
         else:
             # convert flattened data into 3d array of vectors
             # shapes data from (p,t,xyz) to (p,t,x,y,z)
+            print np.shape(self.datalst)
             redatalst = np.reshape(self.datalst,[2*self.disprange+1,self.timesteps,self.nx,self.ny,self.nz], 'F')
             cutOverlap = redatalst[:,:,:,:,:-2]
             # (p,t,x,y,z) -> (t,x,y,p,z)
@@ -58,7 +59,7 @@ class hybridReader:
         self.nz = nz
         self.numProc = numProc
         self.isVec = isVec
-        self.disprange = 2
+        self.disprange = 1
         self.zrange = (nz-2)*(2*self.disprange+1)
         self.datalst = self._getDatalst()
         self.timesteps = self._getTimesteps()
@@ -67,10 +68,10 @@ class hybridReader:
     # Construct a 2-d slice to view.
     def getSlice(self,t,axs, depth=0.5):
         if(axs == 'xy'):
-            return np.array([[self.data[t][i][j][depth*(self.zrange-1)] for i in range(40,100)]
+            return np.array([[self.data[t][i][j][depth*(self.zrange-1)] for i in range(self.nx)]
                                                                         for j in range(self.ny)])
         elif(axs == 'xz'):
-            return np.array([[self.data[t][i][depth*(self.ny-1)][j] for i in range(40,100)] 
+            return np.array([[self.data[t][i][depth*(self.ny-1)][j] for i in range(self.nx)] 
                                                                     for j in range(self.zrange)])
         elif(axs == 'yz'):
             return np.array([[self.data[t][depth*(self.nx-1)][i][j] for i in range(self.ny)] 
