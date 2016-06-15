@@ -7,7 +7,7 @@ def a():
    n = n+1
    return n
 
-class hybridReader:
+class HybridReader:
 
     def _grabData(self,filename):
         datafile = ff.FortranFile(filename)
