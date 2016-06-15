@@ -2,7 +2,7 @@
 import FortranFile as ff
 import numpy as np
 import matplotlib.pyplot as plt
-import hybridReader2 as hr
+import HybridReader2 as hr
 from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
 from matplotlib.colors import Normalize
 import matplotlib.animation as animation
