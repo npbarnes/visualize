@@ -10,6 +10,8 @@ from functools import partial
 class HybridReader2:
     def __init__(self, prefix, variable):
         self.prefix = prefix
+        self.grid = join(prefix,'grid')
+        self.particle = join(prefix,'particle')
         self.var = variable
         self.para = self._getParameters()
 
@@ -62,7 +64,7 @@ class HybridReader2:
         para.update({'RIo':RIo})
 
         # Compute additional useful parameters
-        paths = map(partial(join,self.prefix),self.sort_filenames())
+        paths = map(partial(join,self.grid),self.sort_filenames())
         zrange = (para['nz']-2)*len(paths)
         saved_steps = para['nt']/para['nout']
         para.update({'zrange':zrange, 'saved_steps':saved_steps})
@@ -71,7 +73,7 @@ class HybridReader2:
         return para
 
     def filenames(self):
-        return [f for f in listdir(self.prefix) if isfile(join(self.prefix,f)) and self.var in f]
+        return [f for f in listdir(self.grid) if isfile(join(self.grid,f)) and self.var in f
                                                                            and f.startswith('c.')]
 
     def _get_number(self, filename):
@@ -97,7 +99,7 @@ class HybridReader2:
 
     def get_saved_timesteps(self):
         filename = self.filenames()[0]
-        f = ff.FortranFile(join(self.prefix,filename))
+        f = ff.FortranFile(join(self.grid,filename))
         ms = []
         while(True):
             try:
@@ -110,7 +112,7 @@ class HybridReader2:
         return ms
 
     def get_last_timestep(self):
-        paths = map(partial(join,self.prefix),self.sort_filenames())
+        paths = map(partial(join,self.grid),self.sort_filenames())
         handles = map(ff.FortranFile,paths)
         map(lambda x:x.seek(0,SEEK_END), handles)
         # (xyz)
@@ -123,7 +125,7 @@ class HybridReader2:
         return m, self.para['dt']*m, data
 
     def get_all_timesteps(self):
-        paths = map(partial(join,self.prefix),self.sort_filenames())
+        paths = map(partial(join,self.grid),self.sort_filenames())
         handles = map(ff.FortranFile,paths)
 
         steps = self.get_saved_timesteps()
