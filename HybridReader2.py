@@ -72,6 +72,7 @@ class HybridReader2:
 
     def filenames(self):
         return [f for f in listdir(self.prefix) if isfile(join(self.prefix,f)) and self.var in f]
+                                                                           and f.startswith('c.')]
 
     def _get_number(self, filename):
         dim = re.findall(r'_3d_', filename)
