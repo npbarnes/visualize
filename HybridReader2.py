@@ -73,6 +73,41 @@ class HybridReader2:
         assert len(record)==1
         para.update({'RIo':record[0]})
 
+        # Read from c.coord.dat
+        f = ff.FortranFile(join(self.prefix,'c.coord.dat'))
+
+        record = f.readInts()
+        assert len(record)==1
+        assert para['nx'] == record[0]
+
+        record = f.readInts()
+        assert len(record)==1
+        assert para['ny'] == record[0]
+
+        record = f.readInts()
+        assert len(record)==1
+        assert para['nz'] == record[0]
+
+        record = f.readReals()
+        assert len(record)==para['nx']
+        para.update({'qx':record})
+
+        record = f.readReals()
+        assert len(record)==para['ny']
+        para.update({'qy':record})
+
+        record = f.readReals()
+        assert len(record)==para['nz']
+        para.update({'qz':record})
+
+        record = f.readReals()
+        assert len(record)==para['nz']
+        para.update({'dz_grid':record})
+
+        record = f.readReals()
+        assert len(record)==para['nz']
+        para.update({'dz_cell':record})
+
         # Compute additional useful parameters
         paths = map(partial(join,self.grid),self.sort_filenames())
         zrange = (para['nz']-2)*len(paths)
