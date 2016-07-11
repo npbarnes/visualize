@@ -24,6 +24,7 @@ class HybridReader2:
                             ('dx',np.float32),
                             ('dy',np.float32),
                             ('delz',np.float32)])
+        assert len(record)==1
         para = dict(zip(record.dtype.names,record[0]))
 
         record = f.readOther([  ('nt',np.int32),
@@ -31,36 +32,45 @@ class HybridReader2:
                             ('ntsub',np.int32),
                             ('dt',np.float32),
                             ('nout',np.int32)])
+        assert len(record)==1
         para.update(zip(record.dtype.names,record[0]))
 
         out_dir = f.readString()
         para.update({'out_dir':out_dir})
 
         record = f.readReals()
+        assert len(record)==2
         para.update([('vtop',record[0]),('vbottom',record[1])])
 
         record = f.readInts()
+        assert len(record)==1
         para.update({'Ni_max':record[0]})
 
         record = f.readOther([  ('mproton',np.float64),
                             ('mpu',np.float64),
                             ('mheavy',np.float32)])
+        assert len(record)==1
         para.update(zip(record.dtype.names,record[0]))
 
         record = f.readReals()
+        assert len(record)==2
         para.update([('np_top',record[0]),('np_bottom',record[1])])
 
         record = f.readReals()
+        assert len(record)==2
         para.update([('b0_top',record[0]),('b0_bottom',record[1])])
 
         record = f.readReals()
+        assert len(record)==2
         para.update([('vth_top',record[0]),('vth_bottom',record[1])])
 
         record = f.readOther([  ('alpha',np.float64),
                             ('beta',np.float32)])
+        assert len(record)==1
         para.update(zip(record.dtype.names,record[0]))
 
         record = f.readReals()
+        assert len(record)==1
         para.update({'RIo':record[0]})
 
         # Compute additional useful parameters
