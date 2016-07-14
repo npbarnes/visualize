@@ -114,6 +114,16 @@ class HybridReader2:
         saved_steps = para['nt']/para['nout']
         para.update({'zrange':zrange, 'saved_steps':saved_steps})
 
+        nz = para['nz']
+        qz = para['qz']
+        qzrange = np.empty(zrange+2)
+        qzrange[0] = qz[0]
+        qzrange[1] = qz[1]
+        for i in range(len(paths)):
+            qzrange[i*nz-2*i+2:(i+1)*nz-2*(i+1)+2] = qzrange[i*nz-2*i]+qz[2:]
+
+        # Cut the last two for periodic boundaries
+        para.update({'qzrange':qzrange[:-2]})
 
         return para
 
