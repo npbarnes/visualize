@@ -6,6 +6,7 @@ import HybridReader2 as hr
 from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
 from matplotlib.colors import Normalize
 import matplotlib.animation as animation
+from scipy.interpolate import RegularGridInterpolator
 
 import colormaps as cmaps
 plt.register_cmap(name='viridis', cmap=cmaps.viridis)
@@ -59,6 +60,16 @@ class HybridAnimator():
         self.data = self.h.get_all_timesteps()['data']
         self._has_data = True
 
+    def _resample_slice(self,data2d,qa,qb,na,nb):
+        rgi = RegularGridInterpolator(points=[qa,qb], values=data2d)
+
+        # mgrid gives us new_grid[:,i,j] == [x,y] coordinates of point i,j
+        new_grid = np.mgrid[qa[0]:qa[-1]:na*1j, qb[0]:qb[-1]:nb*1j]
+        # rollaxis turns it into new_grid[i,j] == [x,y]
+        new_grid = np.rollaxis(new_grid,0,len(new_grid.shape))
+
+        return rgi(new_grid)
+
     def animate(self):
         if not self._has_data:
             self.get_data()
@@ -73,11 +84,26 @@ class HybridAnimator():
 
     def _getSlice(self,t,s,d):
         if(s == 'xy'):
-            return self.data[t][:,:,d*self.h.para['zrange']].transpose()
+            qa = self.h.para['qx']
+            qb = self.h.para['qy']
+            na = self.h.para['nx']
+            nb = self.h.para['ny']
+            resampled = self._resample_slice(self.data[t][:,:,d*self.h.para['zrange']],qa,qb,na,nb)
+            return resampled.transpose()
         elif(s == 'xz'):
-            return self.data[t][:,d*self.h.para['ny'],:].transpose()
+            qa = self.h.para['qx']
+            qb = self.h.para['qzrange']
+            na = self.h.para['nx']
+            nb = self.h.para['zrange']
+            resampled = self._resample_slice(self.data[t][:,d*self.h.para['ny'],:],qa,qb,na,nb)
+            return resampled.transpose()
         elif(s == 'yz'):
-            return self.data[t][d*self.h.para['nx'],:,:].transpose()
+            qa = self.h.para['qy']
+            qb = self.h.para['qz']
+            na = self.h.para['ny']
+            nb = self.h.para['zrange']
+            resampled = self._resample_slice(self.data[t][d*self.h.para['nx'],:,:],qa,qb,na,nb)
+            return resampled.transpose()
         
     # UI update functions
     def _radioUpdate(self,s):
