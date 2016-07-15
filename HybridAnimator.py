@@ -46,10 +46,6 @@ class HybridAnimator():
         self.stime = Slider(self.axtime, 'Time', 0, self.h.para['saved_steps'], valinit=t0)
         self.stime.on_changed(self._timeUpdate)
 
-        self.axscale = plt.axes([0.1,0.0,0.65,0.02])
-        self.sscale = Slider(self.axscale, 'Scale', 0, 50, valinit=20)
-        self.sscale.on_changed(self._scaleUpdate)
-
         self.axplay = plt.axes([0.84,0.04,0.12,0.04])
         self.bplay = Button(self.axplay, 'Play/Pause')
         self.bplay.on_clicked(self._playUpdate)
@@ -129,10 +125,6 @@ class HybridAnimator():
         t0 = max(0,t0)
         playing = False
         self._drawSlice()
-
-    def _scaleUpdate(self,val):
-        val=max(val,1)
-        plt.draw()
 
     def _depthUpdate(self,val):
         global d0
