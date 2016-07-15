@@ -95,7 +95,7 @@ class HybridAnimator():
             return resampled.transpose()
         elif(s == 'yz'):
             qa = self.h.para['qy']
-            qb = self.h.para['qz']
+            qb = self.h.para['qzrange']
             na = self.h.para['ny']
             nb = self.h.para['zrange']
             resampled = self._resample_slice(self.data[t][d*self.h.para['nx'],:,:],qa,qb,na,nb)
