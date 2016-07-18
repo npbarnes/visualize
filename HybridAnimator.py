@@ -38,11 +38,11 @@ class HybridAnimator():
         self.radio = RadioButtons(self.rax, ('xy','xz','yz'))
         self.radio.on_clicked(self._radioUpdate)
 
-        self.axdepth = plt.axes([0.1,0.06,0.65,0.02])
+        self.axdepth = plt.axes([0.1,0.04,0.65,0.02])
         self.sdepth = Slider(self.axdepth, 'Depth', 0, 1, valinit=0.5)
         self.sdepth.on_changed(self._depthUpdate)
 
-        self.axtime = plt.axes([0.1,0.03,0.65,0.02])
+        self.axtime = plt.axes([0.1,0.01,0.65,0.02])
         self.stime = Slider(self.axtime, 'Time', 0, self.h.para['saved_steps'], valinit=t0)
         self.stime.on_changed(self._timeUpdate)
 
