@@ -25,11 +25,19 @@ class HybridAnimator():
         self.variable = variable
         self.h = hr.HybridReader2(self.prefix,self.variable)
 
-        self.Rp = 1.216
-        self.lengthx = self.h.para['nx']*self.Rp
-        self.plutox = (int(self.h.para['nx']/2)+70)*self.Rp
-        self.heightz = self.h.para['zrange']*self.Rp
-        self.heighty = self.h.para['ny']*self.Rp
+        qx = self.h.para['qx']
+        qy = self.h.para['qy']
+        qzrange = self.h.para['qzrange']
+        nx = self.h.para['nx']
+        ny = self.h.para['ny']
+        zrange = self.h.para['zrange']
+        offset = self.h.para['pluto_offset']
+
+        self.Rp = 1186 # km
+        self.lengthx = (qx[-1] - qx[0])/self.Rp
+        self.plutox = qx[(int(nx/2)+offset)]/self.Rp
+        self.heightz = (qzrange[-1] - qzrange[0])/self.Rp
+        self.heighty = (qy[-1]- qy[0])/self.Rp
 
         self.fig = plt.figure()
         self.ax = plt.axes()
