@@ -116,11 +116,11 @@ class HybridAnimator():
         self.im.set_data(self._getSlice(t0,s0,d0))
 
         if(s0 == 'xy'):
-            self.im.set_extent([0,nx,0,ny])
+            self.im.set_extent([-self.plutox,self.lengthx-self.plutox,-self.heighty/2,self.heighty/2])
         elif(s0 == 'xz'):
-            self.im.set_extent([0,nx,0,zrange])
+            self.im.set_extent([-self.plutox,self.lengthx-self.plutox,-self.heightz/2,self.heightz/2])
         elif(s0 == 'yz'):
-            self.im.set_extent([0,ny,0,zrange])
+            self.im.set_extent([-self.heighty/2,self.heighty/2,-self.heightz/2,self.heightz/2])
         plt.draw()
 
     def _drawSlice(self):
