@@ -73,6 +73,54 @@ class HybridReader2:
         assert len(record)==1
         para.update({'RIo':record[0]})
 
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'bo_init':record[0]})
+
+        record = f.readInts()
+        assert len(record)==1
+        para.update({'ion_amu':record[0]})
+
+        record = f.readInts()
+        assert len(record)==1
+        para.update({'mpu':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'nf_init':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'dt_frac':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'vsw':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'vth':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'Ni_tot_frac':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'dx_frac':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'nu_init_frac':record[0]})
+
+        record = f.readInts()
+        assert len(record)==1
+        para.update({'mrestart':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'pluto_offset':record[0], 'ri0':record[0]})
+
         # Read from c.coord.dat
         f = ff.FortranFile(join(self.prefix,'c.coord.dat'))
 
