@@ -1,0 +1,19 @@
+#!/usr/bin/python
+from HybridReader2 import HybridReader2
+from sys import argv
+from tvtk.api import tvtk, write_data
+
+prefix = argv[1]
+variable = argv[2]
+hr = HybridReader2(prefix,variable)
+
+last_data = hr.get_all_timesteps()['data'][-1]
+r = tvtk.RectilinearGrid()
+r.point_data.scalars = last_data.ravel(order='F')
+r.point_data.scalars.name = variable
+r.dimensions = last_data.shape
+r.x_coordinates = hr.para['qx']
+r.y_coordinates = hr.para['qy']
+r.z_coordinates = hr.para['qzrange']
+
+write_data(r, variable+'.vtk')
