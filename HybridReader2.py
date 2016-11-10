@@ -6,6 +6,7 @@ from os.path import isfile, join
 import re
 from operator import itemgetter
 from functools import partial
+from HybridParams import HybridParams
 
 class HybridReader2:
     def __init__(self, prefix, variable):
@@ -16,145 +17,8 @@ class HybridReader2:
         self.para = self._getParameters()
 
     def _getParameters(self):
-        # Read from para.dat
-        f = ff.FortranFile(join(self.prefix,'para.dat'))
-        record = f.readOther([  ('nx',np.int32),
-                            ('ny',np.int32),
-                            ('nz',np.int32),
-                            ('dx',np.float32),
-                            ('dy',np.float32),
-                            ('delz',np.float32)])
-        assert len(record)==1
-        para = dict(zip(record.dtype.names,record[0]))
-
-        record = f.readOther([  ('nt',np.int32),
-                            ('dtsub_init',np.float32),
-                            ('ntsub',np.int32),
-                            ('dt',np.float32),
-                            ('nout',np.int32)])
-        assert len(record)==1
-        para.update(zip(record.dtype.names,record[0]))
-
-        out_dir = f.readString()
-        para.update({'out_dir':out_dir})
-
-        record = f.readReals()
-        assert len(record)==2
-        para.update([('vtop',record[0]),('vbottom',record[1])])
-
-        record = f.readInts()
-        assert len(record)==1
-        para.update({'Ni_max':record[0]})
-
-        record = f.readOther([  ('mproton',np.float64),
-                            ('mpu',np.float64),
-                            ('mheavy',np.float32)])
-        assert len(record)==1
-        para.update(zip(record.dtype.names,record[0]))
-
-        record = f.readReals()
-        assert len(record)==2
-        para.update([('np_top',record[0]),('np_bottom',record[1])])
-
-        record = f.readReals()
-        assert len(record)==2
-        para.update([('b0_top',record[0]),('b0_bottom',record[1])])
-
-        record = f.readReals()
-        assert len(record)==2
-        para.update([('vth_top',record[0]),('vth_bottom',record[1])])
-
-        record = f.readOther([  ('alpha',np.float64),
-                            ('beta',np.float32)])
-        assert len(record)==1
-        para.update(zip(record.dtype.names,record[0]))
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'RIo':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'bo_init':record[0]})
-
-        record = f.readInts()
-        assert len(record)==1
-        para.update({'ion_amu':record[0]})
-
-        record = f.readInts()
-        assert len(record)==1
-        para.update({'mpu':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'nf_init':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'dt_frac':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'vsw':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'vth':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'Ni_tot_frac':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'dx_frac':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'nu_init_frac':record[0]})
-
-        record = f.readInts()
-        assert len(record)==1
-        para.update({'mrestart':record[0]})
-
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'pluto_offset':record[0], 'ri0':record[0]})
-
-        # Read from c.coord.dat
-        f = ff.FortranFile(join(self.prefix,'c.coord.dat'))
-
-        record = f.readInts()
-        assert len(record)==1
-        assert para['nx'] == record[0]
-
-        record = f.readInts()
-        assert len(record)==1
-        assert para['ny'] == record[0]
-
-        record = f.readInts()
-        assert len(record)==1
-        assert para['nz'] == record[0]
-
-        record = f.readReals()
-        assert len(record)==para['nx']
-        para.update({'qx':record})
-
-        record = f.readReals()
-        assert len(record)==para['ny']
-        para.update({'qy':record})
-
-        record = f.readReals()
-        assert len(record)==para['nz']
-        para.update({'qz':record})
-
-        record = f.readReals()
-        assert len(record)==para['nz']
-        para.update({'dz_grid':record})
-
-        record = f.readReals()
-        assert len(record)==para['nz']
-        para.update({'dz_cell':record})
+        # Read para.dat and coords.dat
+        para = HybridParams(self.prefix).para
 
         # Compute additional useful parameters
         paths = map(partial(join,self.grid),self.sort_filenames())
