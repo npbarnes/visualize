@@ -31,7 +31,10 @@ class HybridAnimator():
         nx = self.h.para['nx']
         ny = self.h.para['ny']
         zrange = self.h.para['zrange']
-        offset = self.h.para['pluto_offset']
+        try:
+            offset = self.h.para['pluto_offset']
+        except IndexError:
+            offset = 30
 
         self.Rp = 1186 # km
         self.lengthx = (qx[-1] - qx[0])/self.Rp
