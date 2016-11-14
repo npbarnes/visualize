@@ -31,10 +31,7 @@ class HybridAnimator():
         nx = self.h.para['nx']
         ny = self.h.para['ny']
         zrange = self.h.para['zrange']
-        try:
-            offset = self.h.para['pluto_offset']
-        except KeyError:
-            offset = 30
+        offset = self.h.para['pluto_offset']
 
         self.Rp = 1186 # km
         self.lengthx = (qx[-1] - qx[0])/self.Rp
@@ -68,19 +65,14 @@ class HybridAnimator():
         self._has_data = True
 
     def _resample_slice(self,data2d,qa,qb,na,nb):
+        rgi = RegularGridInterpolator(points=[qa,qb], values=data2d)
 
         # mgrid gives us new_grid[:,i,j] == [x,y] coordinates of point i,j
         new_grid = np.mgrid[qa[0]:qa[-1]:na*1j, qb[0]:qb[-1]:nb*1j]
         # rollaxis turns it into new_grid[i,j] == [x,y]
         new_grid = np.rollaxis(new_grid,0,len(new_grid.shape))
 
-        rgi = RegularGridInterpolator(points=[qa,qb], values=data2d, bounds_error=True)
-        try:
-            return rgi(new_grid)
-        except ValueError:
-            print("Warning: RegularGridInterpolator bounds error encountered")
-            rgi = RegularGridInterpolator(points=[qa,qb], values=data2d, bounds_error=False)
-            return rgi(new_grid)
+        return rgi(new_grid)
 
     def animate(self):
         if not self._has_data:
