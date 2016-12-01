@@ -17,6 +17,8 @@ class HybridReader2:
         self.para = self._getParameters()
 
     def _getParameters(self):
+        """Reads parameters from para.dat and coords.dat and computes
+        some additional parameters that HybridParams cannot."""
         # Read para.dat and coords.dat
         para = HybridParams(self.prefix).para
 
@@ -39,6 +41,8 @@ class HybridReader2:
 
         return para
 
+    ######################################################################################
+    # Utilities
     def filenames(self):
         return [f for f in listdir(self.grid) if isfile(join(self.grid,f)) and self.var in f
                                                                            and f.startswith('c.')]
@@ -63,8 +67,10 @@ class HybridReader2:
 
     def _cut_overlap(self,a):
         return a[:-2*self.para['nx']*self.para['ny']]
+    ###################################################################################
 
     def get_saved_timesteps(self):
+        """returns a list of the time step numbers the simulation saved"""
         filename = self.filenames()[0]
         f = ff.FortranFile(join(self.grid,filename))
         ms = []
