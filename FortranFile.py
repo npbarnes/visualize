@@ -153,10 +153,12 @@ class FortranFile(file):
         self.seek(-self._header_length,os.SEEK_CUR)
         l = self._read_check()
         self.seek(-(2*self._header_length + l),os.SEEK_CUR)
+        pos = self.tell()
         check_size = self._read_check()
         if check_size != l:
             raise IOError('Error reading record from data file')
         data_str = self._read_exactly(l)
+        self.seek(pos,os.SEEK_SET)
         return data_str
 
     def skipRecord(self):
