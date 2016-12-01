@@ -145,7 +145,7 @@ class HybridParams:
 
         record = f.readInts()
         assert len(record)==1
-        para.update({'part_nout'})
+        para.update({'part_nout':record[0]})
 
         return para
 
