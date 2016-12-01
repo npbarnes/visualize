@@ -16,6 +16,8 @@ class HybridReader2:
         self.particle = join(prefix,'particle')
         self.var = variable
         self.para = self._getParameters()
+        self.paths = map(partial(join,self.grid),self.sort_filenames())
+        self.handles = map(ff.FortranFile,self.paths)
 
     def _getParameters(self):
         """Reads parameters from para.dat and coords.dat and computes
@@ -24,8 +26,8 @@ class HybridReader2:
         para = HybridParams(self.prefix).para
 
         # Compute additional useful parameters
-        paths = map(partial(join,self.grid),self.sort_filenames())
-        zrange = (para['nz']-2)*len(paths)
+        self.paths = map(partial(join,self.grid),self.sort_filenames())
+        zrange = (para['nz']-2)*len(self.paths)
         saved_steps = para['nt']/para['nout']
         para.update({'zrange':zrange, 'saved_steps':saved_steps})
 
@@ -34,7 +36,7 @@ class HybridReader2:
         qzrange = np.empty(zrange+2)
         qzrange[0] = qz[0]
         qzrange[1] = qz[1]
-        for i in range(len(paths)):
+        for i in range(len(self.paths)):
             qzrange[i*nz-2*i+2:(i+1)*nz-2*(i+1)+2] = qzrange[i*nz-2*i]+qz[2:]
 
         # Cut the last two for periodic boundaries
@@ -85,42 +87,63 @@ class HybridReader2:
         f.close()
         return ms
 
-    def get_last_timestep(self):
-        paths = map(partial(join,self.grid),self.sort_filenames())
-        handles = map(ff.FortranFile,paths)
-        map(lambda x:x.seek(0,SEEK_END), handles)
+    def get_next_timestep(self):
+        """Returns the next timestep number and data leaving the file position after that data"""
+        # read the time step record
+        mrecords = map(lambda x: x.readReals(),self.handles)
+        assert mrecords.shape == (len(self.handles),1)
+        assert np.all(mrecords == mrecords[0])
+        m = mrecrods[0]
         # (xyz)
-        flat_data = np.concatenate(map(lambda x:self._cut_overlap(x.readBackReals()), handles))
+        flat_data = np.concatenate(map(lambda x:self._cut_overlap(x.readReals()), self.handles))
         # (x,y,z)
-        data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],(self.para['nz']-2)*len(paths)],'F')
+        try:
+            data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],(self.para['nz']-2)*len(self.paths)],'F')
+        except ValueError:
+            data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],(self.para['nz']-2)*len(self.paths),3],'F')
 
-        m = handles[0].readBackInts()[0]
-        map(lambda x: x.close(), handles)
+        return m, data
+
+    def get_prev_timestep(self):
+        """Returns the next timestep number and data leaving the file position before that timestep record"""
+        # Skip back over the data and the timestep
+        map(lambda x: x.skipBackRecord(),self.handles)
+        map(lambda x: x.skipBackRecord(),self.handles)
+        # Read the data and timestep
+        m, data = self.get_next_timestep()
+        # Skip back
+        map(lambda x: x.skipBackRecord(),self.handles)
+        map(lambda x: x.skipBackRecord(),self.handles)
+
+        return m, data
+
+    def get_last_timestep(self):
+        """Returns time step number, time, and data for the last saved step of the simulation"""
+        map(lambda x:x.seek(0,SEEK_END), self.handles)
+        m, data = self.get_prev_timestep()
         return m, self.para['dt']*m, data
 
     def get_all_timesteps(self):
-        paths = map(partial(join,self.grid),self.sort_filenames())
-        handles = map(ff.FortranFile,paths)
-
+        """Returns and array of structures containing step, time, and data for each saved timestep."""
         steps = self.get_saved_timesteps()
         nx = self.para['nx']
         ny = self.para['ny']
         nz = self.para['nz']
-        zrange = (nz-2)*len(paths)
+        zrange = (nz-2)*len(self.paths)
         dtype = np.dtype([('step',np.int32),('time',np.float32),('data',np.float32,(nx,ny,zrange))])
         ret = np.empty(len(steps),dtype=dtype)
 
         for n in range(len(steps)):
             # First skip the time step record
-            map(lambda x: x.skipRecord(),handles)
+            map(lambda x: x.skipRecord(),self.handles)
             # (xyz)
-            flat_data = np.concatenate(map(lambda x:self._cut_overlap(x.readReals()), handles))
+            flat_data = np.concatenate(map(lambda x:self._cut_overlap(x.readReals()), self.handles))
             # (x,y,z)
-            data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],(self.para['nz']-2)*len(paths)],'F')
+            data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],(self.para['nz']-2)*len(self.paths)],'F')
 
             ret[n] = (steps[n],self.para['dt']*steps[n],data)
 
-        map(lambda x: x.close(), handles)
+        map(lambda x: x.close(), self.handles)
         return ret
 
 if __name__ == "__main__":
