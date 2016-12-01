@@ -68,7 +68,7 @@ class HybridAnimator():
         self._has_data = True
 
     def _resample_slice(self,data2d,qa,qb,na,nb):
-        rgi = RegularGridInterpolator(points=[qa,qb], values=data2d)
+        rgi = RegularGridInterpolator(points=[qa,qb], values=data2d, bounds_error=False)
 
         # mgrid gives us new_grid[:,i,j] == [x,y] coordinates of point i,j
         new_grid = np.mgrid[qa[0]:qa[-1]:na*1j, qb[0]:qb[-1]:nb*1j]
