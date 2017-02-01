@@ -176,6 +176,18 @@ class FortranFile(file):
         if check_size != l:
             raise IOError('Error reading record from data file')
 
+    def skipBackRecord(self):
+        if self.tell() < self._header_length:
+            raise IOError('Error reading record from data file')
+        self.seek(-self._header_length,os.SEEK_CUR)
+        l = self._read_check()
+        self.seek(-(2*self._header_length + l),os.SEEK_CUR)
+        pos = self.tell()
+        check_size = self._read_check()
+        if check_size != l:
+            raise IOError('Error reading record from data file')
+        self.seek(pos,os.SEEK_SET)
+
     def writeRecord(self,s):
         """Write a record with the given bytes.
 
