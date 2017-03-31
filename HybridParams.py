@@ -49,8 +49,8 @@ class HybridParams:
         para.update({'Ni_max':record[0]})
 
         record = f.readOther([  ('mproton',np.float64),
-                            ('mpu',np.float64),
-                            ('mheavy',np.float32)])
+                            ('m_pu',np.float64),
+                            ('m_heavy',np.float32)])
         assert len(record)==1
         para.update(zip(record.dtype.names,record[0]))
 
@@ -83,7 +83,6 @@ class HybridParams:
         try:
             record = f.readReals()
         except IOError:
-            print('Check version of the parameter file')
             raise
         else:
             assert len(record)==1
@@ -139,7 +138,7 @@ class HybridParams:
         record = f.readInts()
         if len(record) != 1:
             raise FormatError
-        assert record[0] == 3
+        #assert record[0] == 3, 'record was '+ str(record[0])
 
         para = self._readV2(f)
 

@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import HybridReader2 as hr
 from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, LogNorm
 import matplotlib.animation as animation
 from scipy.interpolate import RegularGridInterpolator
 
@@ -45,11 +45,15 @@ class HybridAnimator():
         self.fig = plt.figure()
         self.ax = plt.axes()
 
+        plt.title("Density $(m^{-3})$")
+        plt.xlabel("X $(R_p)$")
+        plt.ylabel("Y $(R_p)$")
+
         self.rax = plt.axes([0.01,0.7,0.07,0.15])
         self.radio = RadioButtons(self.rax, ('xy','xz','yz'))
         self.radio.on_clicked(self._radioUpdate)
 
-        self.axdepth = plt.axes([0.1,0.04,0.65,0.02])
+        self.axdepth = plt.axes([0.1,0.02,0.65,0.02])
         self.sdepth = Slider(self.axdepth, 'Depth', 0, 1, valinit=0.5)
         self.sdepth.on_changed(self._depthUpdate)
 
@@ -64,7 +68,9 @@ class HybridAnimator():
         self._has_data = False
 
     def get_data(self):
+        print("Getting data")
         self.data = self.h.get_all_timesteps()['data']
+        print("Done getting data")
         self._has_data = True
 
     def _resample_slice(self,data2d,qa,qb,na,nb):
@@ -81,7 +87,8 @@ class HybridAnimator():
         if not self._has_data:
             self.get_data()
 
-        self.im = self.ax.imshow(self._getSlice(t0,s0,d0),interpolation='none',origin='lower') 
+        self.im = self.ax.imshow(self._getSlice(t0,s0,d0),interpolation='none',origin='lower',norm=LogNorm(), vmin=1.0e13, vmax=1.0e15) 
+        plt.colorbar(mappable=self.im, ax=self.ax)
         self.im.set_extent([-self.plutox,self.lengthx-self.plutox,-self.heightz/2,self.heightz/2])
         self.im.set_cmap(cmaps.viridis)
 

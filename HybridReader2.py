@@ -74,8 +74,8 @@ class HybridReader2:
         if len(dim) != 0 and len(dim) != 1:
             raise ValueError("Found %d instances of \'_3d_\'. expected 0 or 1" % len(dim))
         nums = re.findall(r'\d+', filename)
-        if len(nums) != 1+len(dim):
-            raise ValueError("Found %d numbers in %s. Expected %d" % (len(nums),filename,1+len(dim)))
+#        if len(nums) != 1+len(dim):
+#            raise ValueError("Found %d numbers in %s. Expected %d" % (len(nums),filename,1+len(dim)))
         return int(nums[len(dim)])
 
     def sort_filenames(self):
