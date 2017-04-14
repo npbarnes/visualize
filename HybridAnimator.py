@@ -13,18 +13,15 @@ plt.register_cmap(name='viridis', cmap=cmaps.viridis)
 plt.register_cmap(name='inferno', cmap=cmaps.inferno)
 plt.register_cmap(name='plasma', cmap=cmaps.plasma)
 
-
-s0 = 'xz'
-t0 = 0
-d0 = 0.5
-playing = True
-
 class HybridAnimator():
     def __init__(self,prefix,variable):
+        # Read hybrid files
         self.prefix = prefix
         self.variable = variable
         self.h = hr.HybridReader2(self.prefix,self.variable)
 
+        # Grab some of the parameters directly from there to be used
+        # to compute some extra parameters
         qx = self.h.para['qx']
         qy = self.h.para['qy']
         qzrange = self.h.para['qzrange']
@@ -36,138 +33,71 @@ class HybridAnimator():
         except KeyError:
             offset = 30
 
+        # Constant pluto radius
         self.Rp = 1186 # km
+
+        # Compute extra params
         self.lengthx = (qx[-1] - qx[0])/self.Rp
         self.plutox = qx[(int(nx/2)+offset)]/self.Rp
         self.heightz = (qzrange[-1] - qzrange[0])/self.Rp
         self.heighty = (qy[-1]- qy[0])/self.Rp
+        self.cx = nx/2
+        self.cy = ny/2
+        self.cz = zrange/2
 
-        self.fig = plt.figure()
-        self.ax = plt.axes()
+        # Shift grid so that Pluto lies at (0,0,0) and convert from km to Rp
+        self.qx = (qx - qx[len(qx)/2 + offset])/self.Rp
+        self.qy = (qy - qy[len(qy)/2])/self.Rp
+        self.qzrange = (qzrange - qzrange[len(qzrange)/2])/self.Rp
 
-        plt.title("Density $(m^{-3})$")
-        plt.xlabel("X $(R_p)$")
-        plt.ylabel("Y $(R_p)$")
+        #self.X,self.Y = np.meshgrid(self.qx,qzrange)
+        X,Y = np.meshgrid(self.qx,self.qy)
+        
 
-        self.rax = plt.axes([0.01,0.7,0.07,0.15])
-        self.radio = RadioButtons(self.rax, ('xy','xz','yz'))
-        self.radio.on_clicked(self._radioUpdate)
+        # get figure and axes objects
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2,1)
 
-        self.axdepth = plt.axes([0.1,0.02,0.65,0.02])
-        self.sdepth = Slider(self.axdepth, 'Depth', 0, 1, valinit=0.5)
-        self.sdepth.on_changed(self._depthUpdate)
+        # set the title
+        self.ax1.set_title("Density $(m^{-3})$")
+        self.ax1.set_xlabel('X')
+        self.ax1.set_ylabel('Y')
+        self.ax2.set_xlabel('X')
+        self.ax2.set_ylabel('Z')
 
-        self.axtime = plt.axes([0.1,0.01,0.65,0.02])
-        self.stime = Slider(self.axtime, 'Time', 0, self.h.para['saved_steps'], valinit=t0)
-        self.stime.on_changed(self._timeUpdate)
+        data_slice = self.h.get_next_timestep()[-1][:,:,self.cz]
+        X,Y = np.meshgrid(self.qx,self.qy)
+        self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
 
-        self.axplay = plt.axes([0.84,0.04,0.12,0.04])
-        self.bplay = Button(self.axplay, 'Play/Pause')
-        self.bplay.on_clicked(self._playUpdate)
+        data_slice = self.h.get_next_timestep()[-1][:,self.cy,:]
+        X,Z = np.meshgrid(self.qx,qzrange)
+        self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
 
-        self._has_data = False
-
-    def get_data(self):
-        print("Getting data")
-        self.data = self.h.get_all_timesteps()['data']
-        print("Done getting data")
-        self._has_data = True
-
-    def _resample_slice(self,data2d,qa,qb,na,nb):
-        rgi = RegularGridInterpolator(points=[qa,qb], values=data2d, bounds_error=False)
-
-        # mgrid gives us new_grid[:,i,j] == [x,y] coordinates of point i,j
-        new_grid = np.mgrid[qa[0]:qa[-1]:na*1j, qb[0]:qb[-1]:nb*1j]
-        # rollaxis turns it into new_grid[i,j] == [x,y]
-        new_grid = np.rollaxis(new_grid,0,len(new_grid.shape))
-
-        return rgi(new_grid)
+        self.animation_cache = []
+        self.reading_data = True
 
     def animate(self):
-        if not self._has_data:
-            self.get_data()
-
-        self.im = self.ax.imshow(self._getSlice(t0,s0,d0),interpolation='none',origin='lower',norm=LogNorm(), vmin=1.0e13, vmax=1.0e15) 
-        plt.colorbar(mappable=self.im, ax=self.ax)
-        self.im.set_extent([-self.plutox,self.lengthx-self.plutox,-self.heightz/2,self.heightz/2])
-        self.im.set_cmap(cmaps.viridis)
-
-        self.ani = animation.FuncAnimation( self.fig, self._animUpdate, init_func=self._anim_init,
-                                            frames=34, interval=3, blit=True)
+        self.ani = animation.FuncAnimation(self.fig, self.update_animation, interval=0)
         plt.show()
 
-    def _getSlice(self,t,s,d):
-        if(s == 'xy'):
-            qa = self.h.para['qx']
-            qb = self.h.para['qy']
-            na = self.h.para['nx']
-            nb = self.h.para['ny']
-            resampled = self._resample_slice(self.data[t][:,:,d*self.h.para['zrange']],qa,qb,na,nb)
-            return resampled.transpose()
-        elif(s == 'xz'):
-            qa = self.h.para['qx']
-            qb = self.h.para['qzrange']
-            na = self.h.para['nx']
-            nb = self.h.para['zrange']
-            resampled = self._resample_slice(self.data[t][:,d*self.h.para['ny'],:],qa,qb,na,nb)
-            return resampled.transpose()
-        elif(s == 'yz'):
-            qa = self.h.para['qy']
-            qb = self.h.para['qzrange']
-            na = self.h.para['ny']
-            nb = self.h.para['zrange']
-            resampled = self._resample_slice(self.data[t][d*self.h.para['nx'],:,:],qa,qb,na,nb)
-            return resampled.transpose()
+    def update_animation(self, i):
+        if self.reading_data:
+            try:
+                # Skip the last element in each dimension to make set_array work correctly
+                #data_slice = self.h.get_next_timestep()[-1][:-1,self.cy,:-1]
+                data = self.h.get_next_timestep()[-1]
+            except IOError:
+                # done reading in the data
+                self.reading_data = False
+            else:
+                data_slice_xy = data[:-1,:-1,self.cz]
+                data_slice_xz = data[:-1,self.cy,:-1]
+                self.animation_cache.append((data_slice_xy, data_slice_xz))
+
+        if not self.reading_data:
+            data_slice_xy, data_slice_xz = self.animation_cache[i%len(self.animation_cache)]
+
+        self.artist_xy.set_array(data_slice_xy.T.ravel())
+        self.artist_xz.set_array(data_slice_xz.T.ravel())
+        return self.artist_xy, self.artist_xz,
         
-    # UI update functions
-    def _radioUpdate(self,s):
-        global s0 
-        s0 = s
-        self.im.set_data(self._getSlice(t0,s0,d0))
-
-        if(s0 == 'xy'):
-            self.im.set_extent([-self.plutox,self.lengthx-self.plutox,-self.heighty/2,self.heighty/2])
-        elif(s0 == 'xz'):
-            self.im.set_extent([-self.plutox,self.lengthx-self.plutox,-self.heightz/2,self.heightz/2])
-        elif(s0 == 'yz'):
-            self.im.set_extent([-self.heighty/2,self.heighty/2,-self.heightz/2,self.heightz/2])
-        plt.draw()
-
-    def _drawSlice(self):
-        self.im.set_data(self._getSlice(t0,s0,d0))
-
-    def _timeUpdate(self,val):
-        global t0
-        global playing
-        t0 = min(self.h.para['saved_steps'],int(val))
-        t0 = max(0,t0)
-        playing = False
-        self._drawSlice()
-
-    def _depthUpdate(self,val):
-        global d0
-        d0 = max(val,0)
-        d0 = min(d0,1)
-        self._drawSlice()
-
-    def _playUpdate(self,event):
-        global playing
-        playing = not playing
-
-    def _animUpdate(self,num):
-        global t0
-        global playing
-        if(playing):
-            t0 = (t0+1) % self.h.para['saved_steps']
-            self._drawSlice()
-            self.stime.set_val(t0)
-            #Set_val calls _timeUpdate that turns playing off.
-            playing = True
-        return self.im,
-
-    def _anim_init(self):
-        return self.im,
-
-if __name__ == "__main__":
-    ha = HybridAnimator('databig6','np_3d')
-    ha.animate()
+        
