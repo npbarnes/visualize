@@ -148,8 +148,77 @@ class HybridParams:
 
         return para
 
+    def _readV4(self, f):
+        record = f.readInts()
+        if len(record) != 1:
+            raise FormatError
+
+        para = self._readV1(f)
+
+        try:
+            record = f.readReals()
+        except IOError:
+            raise
+        else:
+            assert len(record)==1
+            para.update({'bo_init':record[0]})
+
+            record = f.readInts()
+            assert len(record)==1
+            para.update({'ion_amu':record[0]})
+
+            record = f.readReals('d')
+            assert len(record)==1
+            para.update({'mpu':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'nf_init':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'dt_frac':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'vsw':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'vth':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'Ni_tot_frac':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'dx_frac':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'nu_init_frac':record[0]})
+
+            record = f.readInts()
+            assert len(record)==1
+            para.update({'mrestart':record[0]})
+
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'pluto_offset':record[0], 'ri0':record[0]})
+
+            return para
+
     def _readPara(self):
         f = ff.FortranFile(join(self.prefix,'para.dat'))
+        try:
+            para = self._readV4(f)
+        except ValueError:
+            f.seek(0)
+        else:
+            para.update({'version':4})
+            return para
+
         try:
             para = self._readV3(f)
         except FormatError:

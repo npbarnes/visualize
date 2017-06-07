@@ -14,13 +14,14 @@ class HybridError(ValueError):
     pass
 
 class HybridReader2:
-    def __init__(self, prefix, variable):
+    def __init__(self, prefix, variable, mode='r'):
         self.prefix = prefix
+        self.var = variable
+        self.mode = mode
         self.grid = join(prefix,'grid')
         self.particle = join(prefix,'particle')
-        self.var = variable
         self.paths = map(partial(join,self.grid),self.sort_filenames())
-        self.handles = map(ff.FortranFile,self.paths)
+        self.handles = map(partial(ff.FortranFile, mode=mode),self.paths)
         self.para = self._getParameters()
         self.isScalar = self._check_scalar()
 
@@ -135,6 +136,11 @@ class HybridReader2:
 
         return m, data
 
+    def skip_next_timestep(self):
+        map(lambda x: x.skipRecord(),self.handles)
+        map(lambda x: x.skipRecord(),self.handles)
+
+
     def get_prev_timestep(self):
         """Returns the next timestep number and data leaving the file position before that timestep record"""
         # Skip back over the data and the timestep
@@ -172,6 +178,39 @@ class HybridReader2:
 
         map(lambda x: x.close(), self.handles)
         return ret
+    
+    def repair_and_reset(self):
+        if self.mode != 'r+':
+            raise HybridError('Cannot repair unless mode is r+')
+
+        map(lambda x:x.seek(0, SEEK_SET), self.handles)
+        count = 0
+        while(True):
+            # First see if there is an error with the step number.
+            try:
+                map(lambda x: x.skipRecord(),self.handles)
+            except IOError:
+                err_in_m = True
+                break
+            # Then see if there is an error with the values.
+            try:
+                map(lambda x: x.skipRecord(),self.handles)
+            except IOError:
+                err_in_m = False
+                break
+            count += 1
+            print(count)
+
+        if not err_in_m:
+            # If the step number was fine, but the data was bad then we need to skip back to the
+            # begining of the step number before truncating.
+            map(lambda x: x.skipBackRecord(),self.handles)
+        map(lambda x: x.truncate(),self.handles)
+        map(lambda x:x.seek(0, SEEK_SET), self.handles)
+
+    def __del__(self):
+        map(lambda x: x.close(),self.handles)
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

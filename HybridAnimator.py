@@ -7,6 +7,7 @@ from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
 from matplotlib.colors import Normalize, LogNorm
 import matplotlib.animation as animation
 from scipy.interpolate import RegularGridInterpolator
+from bisect import bisect
 
 import colormaps as cmaps
 plt.register_cmap(name='viridis', cmap=cmaps.viridis)
@@ -50,12 +51,10 @@ class HybridAnimator():
         self.qy = (qy - qy[len(qy)/2])/self.Rp
         self.qzrange = (qzrange - qzrange[len(qzrange)/2])/self.Rp
 
-        #self.X,self.Y = np.meshgrid(self.qx,qzrange)
-        X,Y = np.meshgrid(self.qx,self.qy)
-        
+
 
         # get figure and axes objects
-        self.fig, (self.ax1, self.ax2) = plt.subplots(2,1)
+        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3,1)
 
         # set the title
         self.ax1.set_title("Density $(m^{-3})$")
@@ -63,6 +62,8 @@ class HybridAnimator():
         self.ax1.set_ylabel('Y')
         self.ax2.set_xlabel('X')
         self.ax2.set_ylabel('Z')
+        self.ax3.set_xlabel('Y')
+        self.ax3.set_ylabel('Z')
 
         data_slice = self.h.get_next_timestep()[-1][:,:,self.cz]
         X,Y = np.meshgrid(self.qx,self.qy)
@@ -71,6 +72,11 @@ class HybridAnimator():
         data_slice = self.h.get_next_timestep()[-1][:,self.cy,:]
         X,Z = np.meshgrid(self.qx,qzrange)
         self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
+
+        self.xind = bisect(qx,-100)
+        data_slice = self.h.get_next_timestep()[-1][self.xind,:,:]
+        Y,Z = np.meshgrid(self.qy,qzrange)
+        self.artist_yz = self.ax3.pcolormesh(Y,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
 
         self.animation_cache = []
         self.reading_data = True
@@ -91,13 +97,15 @@ class HybridAnimator():
             else:
                 data_slice_xy = data[:-1,:-1,self.cz]
                 data_slice_xz = data[:-1,self.cy,:-1]
-                self.animation_cache.append((data_slice_xy, data_slice_xz))
+                data_slice_yz = data[self.xind,:-1,:-1]
+                self.animation_cache.append((data_slice_xy, data_slice_xz, data_slice_yz))
 
         if not self.reading_data:
-            data_slice_xy, data_slice_xz = self.animation_cache[i%len(self.animation_cache)]
+            data_slice_xy, data_slice_xz, data_slice_yz = self.animation_cache[i%len(self.animation_cache)]
 
         self.artist_xy.set_array(data_slice_xy.T.ravel())
         self.artist_xz.set_array(data_slice_xz.T.ravel())
-        return self.artist_xy, self.artist_xz,
+        self.artist_yz.set_array(data_slice_yz.T.ravel())
+        return self.artist_xy, self.artist_xz, self.artist_yz
         
         

@@ -108,7 +108,7 @@ class FortranFile(file):
             default integer).
 
         """
-        file.__init__(self, fname, *args, **kwargs)
+        file.__init__(self, fname,  *args, **kwargs)
         self.ENDIAN = endian
         self.HEADER_PREC = header_prec
 
@@ -163,24 +163,38 @@ class FortranFile(file):
 
     def skipRecord(self):
         """Skip over a single fortran record"""
-        l = self._read_check()
+        startpos = self.tell()
+        try:
+            l = self._read_check()
+        except IOError:
+            self.seek(startpos,os.SEEK_SET)
+            raise
         # seek has undefined behavior if seeking beyond the end of the file
         # we first check if there's enough room to seek, then seek.
         pos = self.tell()
         self.seek(0,os.SEEK_END)
         endpos = self.tell()
         if pos+l > endpos:
+            self.seek(startpos, os.SEEK_SET)
             raise IOError('Error reading record from data file')
         self.seek(pos+l,os.SEEK_SET)
-        check_size = self._read_check()
+        try:
+            check_size = self._read_check()
+        except IOError:
+            self.seek(startpos,os.SEEK_SET)
+            raise
+
         if check_size != l:
-            raise IOError('Error reading record from data file')
+            self.seek(startpos, os.SEEK_SET)
+            raise IOError('Failed Check')
 
     def skipBackRecord(self):
         if self.tell() < self._header_length:
             raise IOError('Error reading record from data file')
         self.seek(-self._header_length,os.SEEK_CUR)
         l = self._read_check()
+        if self.tell() < 2*self._header_length + l:
+            raise IOError('Error reading record from data file')
         self.seek(-(2*self._header_length + l),os.SEEK_CUR)
         pos = self.tell()
         check_size = self._read_check()
