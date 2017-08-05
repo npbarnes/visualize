@@ -10,54 +10,43 @@ from operator import itemgetter
 from functools import partial
 from HybridParams import HybridParams
 
+
 class HybridError(ValueError):
     pass
 
 class HybridReader2:
-    def __init__(self, prefix, variable, mode='r'):
-        self.prefix = prefix
+    def __init__(self, prefix, variable, mode='r', double=False):
+        self.doublereals = double
+
+        if double:
+            self.real_prec = 'd'
+        else:
+            self.real_prec = 'f'
+
         self.var = variable
-        self.mode = mode
-        self.grid = join(prefix,'grid')
-        self.particle = join(prefix,'particle')
-        self.paths = map(partial(join,self.grid),self.sort_filenames())
+        self.hp = HybridParams(prefix)
+        self.para = self.hp.para
+
+        self.filename_format_string = 'c\.{}_3d_(\d+)\.dat'.format(self.var)
+        self.rx = re.compile(self.filename_format_string)
+
+        self.paths = map(partial(join, self.hp.grid), self.sort_filenames())
         self.handles = map(partial(ff.FortranFile, mode=mode),self.paths)
-        self.para = self._getParameters()
         self.isScalar = self._check_scalar()
-
-    def _getParameters(self):
-        """Reads parameters from para.dat and coords.dat and computes
-        some additional parameters that HybridParams cannot."""
-        # Read para.dat and coords.dat
-        para = HybridParams(self.prefix).para
-
-        # Compute additional useful parameters
-        zrange = (para['nz']-2)*len(self.paths)
-        saved_steps = para['nt']/para['nout']
-        para.update({'zrange':zrange, 'saved_steps':saved_steps})
-
-        nz = para['nz']
-        qz = para['qz']
-        qzrange = np.empty(zrange+2)
-        qzrange[0] = qz[0]
-        qzrange[1] = qz[1]
-        for i in range(len(self.paths)):
-            qzrange[i*nz-2*i+2:(i+1)*nz-2*(i+1)+2] = qzrange[i*nz-2*i]+qz[2:]
-
-        # Cut the last two for periodic boundaries
-        para.update({'qzrange':qzrange[:-2]})
-
-        return para
 
     ######################################################################################
     # Utilities
     def _check_scalar(self):
+        if self.doublereals:
+            realsize = 8
+        else:
+            realsize = 4
         h = self.handles[0]
         # skip timestep number
         h.skipRecord()
         size = h._read_check()
         h.seek(0)
-        number = size/4
+        number = size/realsize
         if number == self.para['nx']*self.para['ny']*self.para['nz']:
             return True
         elif number == self.para['nx']*self.para['ny']*self.para['nz']*3:
@@ -67,26 +56,19 @@ class HybridReader2:
 
 
     def filenames(self):
-        return [f for f in listdir(self.grid) if isfile(join(self.grid,f)) and self.var in f
-                                                                           and f.startswith('c.')]
+        return [f for f in listdir(self.hp.grid) if self.rx.search(f)]
 
-    def _get_number(self, filename):
-        dim = re.findall(r'_3d_', filename)
-        if len(dim) != 0 and len(dim) != 1:
-            raise ValueError("Found %d instances of \'_3d_\'. expected 0 or 1" % len(dim))
-        nums = re.findall(r'\d+', filename)
-#        if len(nums) != 1+len(dim):
-#            raise ValueError("Found %d numbers in %s. Expected %d" % (len(nums),filename,1+len(dim)))
-        return int(nums[len(dim)])
+    def _get_number(self, name):
+        match = self.rx.search(name)
+        if match is None:
+            raise RuntimeError("Filename '{}' does not match the format '{}'.".format(name, self.filename_format_string))
+        return int(match.group(1))
 
     def sort_filenames(self):
         names = self.filenames()
-        nums = map(self._get_number, names)
+        names.sort(key=self._get_number,reverse=True)
 
-        aug_list = zip(nums,names)
-        aug_list.sort(key=itemgetter(0),reverse=True)
-
-        return list(zip(*aug_list)[1])
+        return names
 
     def _scalar_cut_overlap(self,a):
         return a[:-2*self.para['nx']*self.para['ny']]
@@ -97,35 +79,36 @@ class HybridReader2:
 
     def get_saved_timesteps(self):
         """returns a list of the time step numbers the simulation saved"""
-        filename = self.filenames()[0]
-        f = ff.FortranFile(join(self.grid,filename))
+        f = self.handles[0]
+        start = f.tell()
+        f.seek(0)
         ms = []
         while(True):
-            try:
-                ms.append(f.readReals()[0])
-            except IOError:
+            try:# try to read the step number
+                ms.append(f.readInts()[0])
+            except IOError:# Error indicates EOF
                 break
-            f.skipRecord()
+            f.skipRecord()# Skip the data record for this step
             
-        f.close()
+        f.seek(start, os.SEEK_SET)
         return ms
 
     def get_next_timestep(self):
         """Returns the next timestep number and data leaving the file position after that data"""
         # read the time step record
-        mrecords = np.array(map(lambda x: x.readReals(),self.handles))
+        mrecords = np.array(map(lambda x: x.readInts(),self.handles))
         assert mrecords.shape == (len(self.handles),1)
         assert np.all(mrecords == mrecords[0])
         m = mrecords[0]
 
         if self.isScalar:
             # (xyz)
-            flat_data = np.concatenate(map(lambda x:self._scalar_cut_overlap(x.readReals()), self.handles))
+            flat_data = np.concatenate(map(lambda x:self._scalar_cut_overlap(x.readReals(self.real_prec)), self.handles))
             # (x,y,z)
             data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],self.para['zrange']],'F')
         else:
             # convert flattened data into 3d array of vectors
-            datalst = map(lambda x:x.readReals(), self.handles)
+            datalst = map(lambda x:x.readReals(self.real_prec), self.handles)
             # shapes data from (p,xyzc) to (p,x,y,z,c)
             redatalst = np.reshape(datalst,[len(self.handles),self.para['nx'],self.para['ny'],self.para['nz'],3], 'F')
             cutOverlap = redatalst[:,:,:,:-2,:]
@@ -142,7 +125,7 @@ class HybridReader2:
 
 
     def get_prev_timestep(self):
-        """Returns the next timestep number and data leaving the file position before that timestep record"""
+        """Returns the previous timestep number and data leaving the file position before that timestep record"""
         # Skip back over the data and the timestep
         map(lambda x: x.skipBackRecord(),self.handles)
         map(lambda x: x.skipBackRecord(),self.handles)
@@ -167,7 +150,7 @@ class HybridReader2:
         nx = self.para['nx']
         ny = self.para['ny']
         nz = self.para['nz']
-        zrange = (nz-2)*len(self.paths)
+        zrange = self.para['zrange']
         dtype = np.dtype([('step',np.int32),('time',np.float32),('data',np.float32,(nx,ny,zrange))])
         ret = np.empty(len(steps),dtype=dtype)
 
