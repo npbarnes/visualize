@@ -1,6 +1,8 @@
 #!/usr/bin/python
 import FortranFile as ff
 import numpy as np
+import matplotlib
+#matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import HybridReader2 as hr
 from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
@@ -54,7 +56,10 @@ class HybridAnimator():
 
 
         # get figure and axes objects
-        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3,1)
+        self.fig, (self.ax1, self.ax2) = plt.subplots(1, 2, sharex=True, sharey=True)
+        self.ax1.set_aspect('equal', adjustable='box-forced')
+        self.ax2.set_aspect('equal', adjustable='box-forced')
+        self.fig.subplots_adjust(hspace=0, wspace=0)
 
         # set the title
         self.ax1.set_title("Density $(m^{-3})$")
@@ -62,50 +67,46 @@ class HybridAnimator():
         self.ax1.set_ylabel('Y')
         self.ax2.set_xlabel('X')
         self.ax2.set_ylabel('Z')
-        self.ax3.set_xlabel('Y')
-        self.ax3.set_ylabel('Z')
 
         data_slice = self.h.get_next_timestep()[-1][:,:,self.cz]
         X,Y = np.meshgrid(self.qx,self.qy)
-        self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
+        self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e13, vmax=1e15)
 
         data_slice = self.h.get_next_timestep()[-1][:,self.cy,:]
-        X,Z = np.meshgrid(self.qx,qzrange)
-        self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
+        X,Z = np.meshgrid(self.qx,self.qzrange)
+        self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e13, vmax=1e15)
 
-        self.xind = bisect(qx,-100)
-        data_slice = self.h.get_next_timestep()[-1][self.xind,:,:]
-        Y,Z = np.meshgrid(self.qy,qzrange)
-        self.artist_yz = self.ax3.pcolormesh(Y,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
+        self.fig.colorbar(self.artist_xy, ax=self.ax1)
+        self.fig.colorbar(self.artist_xz, ax=self.ax2)
 
         self.animation_cache = []
         self.reading_data = True
 
+
     def animate(self):
-        self.ani = animation.FuncAnimation(self.fig, self.update_animation, interval=0)
+        self.ani = animation.FuncAnimation(self.fig, func=self.update_animation, interval=1, blit=True)
         plt.show()
+        #self.ani.save('pluto.mp4', fps=20, bitrate=1800, writer='avconv')
 
     def update_animation(self, i):
         if self.reading_data:
             try:
-                # Skip the last element in each dimension to make set_array work correctly
-                #data_slice = self.h.get_next_timestep()[-1][:-1,self.cy,:-1]
                 data = self.h.get_next_timestep()[-1]
             except IOError:
                 # done reading in the data
                 self.reading_data = False
+                print("Done reading data")
             else:
+                # Skip the last element in each dimension to make set_array work correctly
                 data_slice_xy = data[:-1,:-1,self.cz]
                 data_slice_xz = data[:-1,self.cy,:-1]
-                data_slice_yz = data[self.xind,:-1,:-1]
-                self.animation_cache.append((data_slice_xy, data_slice_xz, data_slice_yz))
+                self.animation_cache.append((data_slice_xy, data_slice_xz))
 
         if not self.reading_data:
-            data_slice_xy, data_slice_xz, data_slice_yz = self.animation_cache[i%len(self.animation_cache)]
+            data_slice_xy, data_slice_xz = self.animation_cache[i%len(self.animation_cache)]
 
         self.artist_xy.set_array(data_slice_xy.T.ravel())
         self.artist_xz.set_array(data_slice_xz.T.ravel())
-        self.artist_yz.set_array(data_slice_yz.T.ravel())
-        return self.artist_xy, self.artist_xz, self.artist_yz
+        return self.artist_xy, self.artist_xz
         
         
