@@ -1,7 +1,9 @@
 import FortranFile as ff
-from os.path import join
+from os import listdir
+from os.path import isfile,join
 import numpy as np
 from functools import partial
+import re
 
 class ParameterReadError(RuntimeError):
     pass
@@ -17,7 +19,14 @@ class HybridParams:
         self.prefix = prefix
         self.grid = join(prefix,'grid')
         self.particle = join(prefix,'particle')
+
         self.para = self._getParameters()
+
+    def num_procs(self):
+        """Count how many density files were output to get the number of processors"""
+        filename_format_string = 'c\.np_3d_(\d+)\.dat'
+        rx = re.compile(filename_format_string)
+        return len( [f for f in listdir(self.grid) if rx.search(f)] )
 
     def _readV1(self, f):
         record = f.readOther([  ('nx',np.int32),
@@ -296,21 +305,25 @@ class HybridParams:
 
         allParams = self._mergeDicts(para,coord)
 
-        # Compute additional useful parameters
-        #paths = map(partial(join,self.grid),self.sort_filenames())
-        #zrange = (para['nz']-2)*len(paths)
-        #saved_steps = para['nt']/para['nout']
-        #para.update({'zrange':zrange, 'saved_steps':saved_steps})
+        # Add the number of processors
+        allParams['num_proc'] = self.num_procs()
 
-        #nz = para['nz']
-        #qz = para['qz']
-        #qzrange = np.empty(zrange+2)
-        #qzrange[0] = qz[0]
-        #qzrange[1] = qz[1]
-        #for i in range(len(paths)):
-        #    qzrange[i*nz-2*i+2:(i+1)*nz-2*(i+1)+2] = qzrange[i*nz-2*i]+qz[2:]
+        # Compute additional useful parameters
+        zrange = (allParams['nz']-2)*allParams['num_proc']
+        allParams['zrange'] = zrange
+        saved_steps = allParams['nt']/allParams['nout']
+        allParams['saved_steps'] = saved_steps
+
+        nz = allParams['nz']
+        qz = allParams['qz']
+        qzrange = np.empty(zrange+2)
+        qzrange[0] = qz[0]
+        qzrange[1] = qz[1]
+        for i in range(allParams['num_proc']):
+            qzrange[i*nz-2*i+2:(i+1)*nz-2*(i+1)+2] = qzrange[i*nz-2*i]+qz[2:]
 
         # Cut the last two for periodic boundaries
-        #para.update({'qzrange':qzrange[:-2]})
+        allParams['qzrange'] = qzrange[:-2]
+
 
         return allParams
