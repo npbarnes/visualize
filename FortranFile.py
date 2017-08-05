@@ -344,4 +344,8 @@ class FortranFile(file):
     def readOther(self, dtype):
         data_str = self.readRecord()
         dtype = numpy.dtype(dtype)
-        return numpy.fromstring(data_str, dtype=dtype)
+        try:
+            return numpy.fromstring(data_str, dtype=dtype)
+        except ValueError:
+            print(len(data_str), dtype.itemsize)
+            raise
