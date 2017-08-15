@@ -30,6 +30,7 @@ class HybridReader2:
         self.filename_format_string = 'c\.{}_3d_(\d+)\.dat'.format(self.var)
         self.rx = re.compile(self.filename_format_string)
 
+
         self.paths = map(partial(join, self.hp.grid), self.sort_filenames())
         self.handles = map(partial(ff.FortranFile, mode=mode),self.paths)
         self.isScalar = self._check_scalar()
@@ -59,7 +60,7 @@ class HybridReader2:
 
 
     def filenames(self):
-        return [f for f in listdir(self.hp.grid) if self.rx.search(f)]
+        return [f for f in listdir(self.hp.grid) if self.rx.match(f)]
 
     def _get_number(self, name):
         match = self.rx.search(name)
