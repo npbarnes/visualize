@@ -26,9 +26,16 @@ class HybridParams:
         """Count how many density files were output to get the number of processors"""
         filename_format_string = 'c\.np_3d_(\d+)\.dat'
         rx = re.compile(filename_format_string)
-        return len( [f for f in listdir(self.grid) if rx.search(f)] )
+        return len( [f for f in listdir(self.grid) if rx.match(f)] )
 
-    def _readV1(self, f):
+    def _readPara(self):
+        para = {}
+        f = ff.FortranFile(join(self.prefix,'para.dat'))
+
+        record = f.readInts()
+        assert len(record)==1
+        para.update({'para_dat_version':record[0]})
+
         record = f.readOther([  ('nx',np.int32),
                             ('ny',np.int32),
                             ('nz',np.int32),
@@ -84,168 +91,58 @@ class HybridParams:
         assert len(record)==1
         para.update({'RIo':record[0]})
 
-        return para
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'b0_init':record[0]})
 
-    def _readV2(self, f):
-        para = self._readV1(f)
-
-        try:
-            record = f.readReals()
-        except IOError:
-            raise
-        else:
-            assert len(record)==1
-            para.update({'bo_init':record[0]})
-
-            record = f.readInts()
-            assert len(record)==1
-            para.update({'ion_amu':record[0]})
-
-            record = f.readInts()
-            assert len(record)==1
-            para.update({'mpu':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'nf_init':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'dt_frac':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'vsw':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'vth':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'Ni_tot_frac':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'dx_frac':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'nu_init_frac':record[0]})
-
-            record = f.readInts()
-            assert len(record)==1
-            para.update({'mrestart':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'pluto_offset':record[0], 'ri0':record[0]})
-
-            return para
-
-    def _readV3(self, f):
         record = f.readInts()
-        if len(record) != 1:
-            raise FormatError
-        #assert record[0] == 3, 'record was '+ str(record[0])
+        assert len(record)==1
+        para.update({'ion_amu':record[0]})
 
-        para = self._readV2(f)
+        record = f.readReals('d')
+        assert len(record)==1
+        para.update({'mpu':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'nf_init':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'dt_frac':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'vsw':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'vth':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'Ni_tot_frac':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'dx_frac':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'nu_init_frac':record[0]})
+
+        record = f.readInts()
+        assert len(record)==1
+        para.update({'mrestart':record[0]})
+
+        record = f.readReals()
+        assert len(record)==1
+        para.update({'pluto_offset':int(record[0]), 'ri0':record[0]})
 
         record = f.readInts()
         assert len(record)==1
         para.update({'part_nout':record[0]})
 
-        return para
-
-    def _readV4(self, f):
-        record = f.readInts()
-        if len(record) != 1:
-            raise FormatError
-
-        para = self._readV1(f)
-
-        try:
-            record = f.readReals()
-        except IOError:
-            raise
-        else:
-            assert len(record)==1
-            para.update({'bo_init':record[0]})
-
-            record = f.readInts()
-            assert len(record)==1
-            para.update({'ion_amu':record[0]})
-
-            record = f.readReals('d')
-            assert len(record)==1
-            para.update({'mpu':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'nf_init':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'dt_frac':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'vsw':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'vth':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'Ni_tot_frac':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'dx_frac':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'nu_init_frac':record[0]})
-
-            record = f.readInts()
-            assert len(record)==1
-            para.update({'mrestart':record[0]})
-
-            record = f.readReals()
-            assert len(record)==1
-            para.update({'pluto_offset':record[0], 'ri0':record[0]})
-
-            return para
-
-    def _readPara(self):
-        f = ff.FortranFile(join(self.prefix,'para.dat'))
-        try:
-            para = self._readV4(f)
-        except ValueError:
-            f.seek(0)
-        else:
-            para.update({'version':4})
-            return para
-
-        try:
-            para = self._readV3(f)
-        except FormatError:
-            f.seek(0)
-        else:
-            para.update({'version':3})
-            return para
-
-        try:
-            para = self._readV2(f)
-        except IOError:
-            f.seek(0)
-        else:
-            para.update({'version':2})
-            return para
-
-        para = self._readV1(f)
-        para.update({'version':1})
         return para
 
     def _readCoord(self):
