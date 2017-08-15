@@ -2,7 +2,6 @@
 import FortranFile as ff
 import numpy as np
 import matplotlib
-#matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import HybridReader2 as hr
 from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
@@ -16,11 +15,27 @@ plt.register_cmap(name='viridis', cmap=cmaps.viridis)
 plt.register_cmap(name='inferno', cmap=cmaps.inferno)
 plt.register_cmap(name='plasma', cmap=cmaps.plasma)
 
+
+class StoppableFrames:
+    def __init__(self):
+        self.done_playing = False
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.done_playing:
+            raise StopIteration
+        else:
+            return self
+
 class HybridAnimator():
-    def __init__(self,prefix,variable):
+    def __init__(self,prefix,variable,save=False):
         # Read hybrid files
         self.prefix = prefix
         self.variable = variable
+        self.save = save
+
         self.h = hr.HybridReader2(self.prefix,self.variable)
 
         # Grab some of the parameters directly from there to be used
@@ -32,7 +47,7 @@ class HybridAnimator():
         ny = self.h.para['ny']
         zrange = self.h.para['zrange']
         try:
-            offset = self.h.para['pluto_offset']
+            offset = int(self.h.para['pluto_offset'])
         except KeyError:
             offset = 30
 
@@ -62,7 +77,7 @@ class HybridAnimator():
         self.fig.subplots_adjust(hspace=0, wspace=0)
 
         # set the title
-        self.ax1.set_title("Density $(m^{-3})$")
+        self.ax1.set_title("Density")
         self.ax1.set_xlabel('X')
         self.ax1.set_ylabel('Y')
         self.ax2.set_xlabel('X')
@@ -70,11 +85,13 @@ class HybridAnimator():
 
         data_slice = self.h.get_next_timestep()[-1][:,:,self.cz]
         X,Y = np.meshgrid(self.qx,self.qy)
-        self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e13, vmax=1e15)
+        #self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e11, vmax=1e13)
+        self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
 
         data_slice = self.h.get_next_timestep()[-1][:,self.cy,:]
         X,Z = np.meshgrid(self.qx,self.qzrange)
-        self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e13, vmax=1e15)
+        #self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e11, vmax=1e13)
+        self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
 
         self.fig.colorbar(self.artist_xy, ax=self.ax1)
         self.fig.colorbar(self.artist_xz, ax=self.ax2)
@@ -82,20 +99,27 @@ class HybridAnimator():
         self.animation_cache = []
         self.reading_data = True
 
-
     def animate(self):
-        self.ani = animation.FuncAnimation(self.fig, func=self.update_animation, interval=1, blit=True)
-        plt.show()
-        #self.ani.save('pluto.mp4', fps=20, bitrate=1800, writer='avconv')
+        if self.save:
+            self.ani = animation.FuncAnimation(self.fig, frames=StoppableFrames(),
+                            func=self.update_animation, interval=1, blit=True, repeat=False)
+            self.ani.save('pluto.mp4', fps=20, bitrate=-1, writer='avconv')
+        else:
+            self.ani = animation.FuncAnimation(self.fig, func=self.update_animation, interval=1, blit=True)
+            plt.show()
 
-    def update_animation(self, i):
+    def update_animation(self, frame):
         if self.reading_data:
             try:
                 data = self.h.get_next_timestep()[-1]
-            except IOError:
+            except ff.NoMoreRecords:
                 # done reading in the data
-                self.reading_data = False
-                print("Done reading data")
+                if self.save:
+                    frame.done_playing = True
+                    return self.artist_xy, self.artist_xz
+                else:
+                    self.reading_data = False
+                    print("Done reading data")
             else:
                 # Skip the last element in each dimension to make set_array work correctly
                 data_slice_xy = data[:-1,:-1,self.cz]
@@ -103,10 +127,8 @@ class HybridAnimator():
                 self.animation_cache.append((data_slice_xy, data_slice_xz))
 
         if not self.reading_data:
-            data_slice_xy, data_slice_xz = self.animation_cache[i%len(self.animation_cache)]
+            data_slice_xy, data_slice_xz = self.animation_cache[frame%len(self.animation_cache)]
 
         self.artist_xy.set_array(data_slice_xy.T.ravel())
         self.artist_xz.set_array(data_slice_xz.T.ravel())
         return self.artist_xy, self.artist_xz
-        
-        
