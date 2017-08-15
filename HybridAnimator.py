@@ -103,7 +103,7 @@ class HybridAnimator():
         if self.save:
             self.ani = animation.FuncAnimation(self.fig, frames=StoppableFrames(),
                             func=self.update_animation, interval=1, blit=True, repeat=False)
-            self.ani.save('pluto.mp4', fps=20, bitrate=-1, writer='avconv')
+            self.ani.save('pluto.mp4', fps=20, bitrate=5000, writer='avconv')
         else:
             self.ani = animation.FuncAnimation(self.fig, func=self.update_animation, interval=1, blit=True)
             plt.show()
