@@ -32,10 +32,21 @@ class HybridParams:
         para = {}
         f = ff.FortranFile(join(self.prefix,'para.dat'))
 
+        # Try to read a version number
         record = f.readInts()
-        assert len(record)==1
-        para.update({'para_dat_version':record[0]})
+        try:
+            assert len(record)==1
+        except AssertionError:
+            # If there is no version number go back to the begining.
+            # Older versions of para.dat don't have a version number.
+            f.seek(0)
+            # Give it a version of zero for completeness.
+            para.update({'para_dat_version':0})
+        else:
+            # Otherwise, add the indicated version to the dictionary.
+            para.update({'para_dat_version':record[0]})
 
+        # This will be the first record in old versions of para.dat
         record = f.readOther([  ('nx',np.int32),
                             ('ny',np.int32),
                             ('nz',np.int32),
@@ -87,11 +98,20 @@ class HybridParams:
         assert len(record)==1
         para.update(zip(record.dtype.names,record[0]))
 
+        # For some versions of para.dat this will be the last record
         record = f.readReals()
         assert len(record)==1
-        para.update({'RIo':record[0]})
+        # Currently (circa 2015-17) this should be the radius of pluto, but in the past
+        # it was the radius of Io, a moon of Jupiter. We record both names here for completeness
+        para.update({'RPluto':record[0], 'RIo':record[0]})
 
-        record = f.readReals()
+        # If there are no more records return what we do have
+        # otherwise, continue.
+        try: 
+            record = f.readReals()
+        except ff.NoMoreRecords:
+            return para
+
         assert len(record)==1
         para.update({'b0_init':record[0]})
 
@@ -137,7 +157,9 @@ class HybridParams:
 
         record = f.readReals()
         assert len(record)==1
-        para.update({'pluto_offset':int(record[0]), 'ri0':record[0]})
+        # ri0 is the older name for this that shouldn't be used because it looks too similar to the parameter RIo
+        # which is also old (radius of the moon Io even though we simulate pluto now).
+        para.update({'pluto_offset':int(record[0]), 'ri0':record[0]}) 
 
         record = f.readInts()
         assert len(record)==1
@@ -146,7 +168,6 @@ class HybridParams:
         return para
 
     def _readCoord(self):
-        # Read from c.coord.dat
         f = ff.FortranFile(join(self.prefix,'c.coord.dat'))
 
         record = f.readInts()
