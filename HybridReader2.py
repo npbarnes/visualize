@@ -34,6 +34,9 @@ class HybridReader2:
         self.handles = map(partial(ff.FortranFile, mode=mode),self.paths)
         self.isScalar = self._check_scalar()
 
+    def restart(self):
+        map(lambda x: x.seek(0), self.handles)
+
     ######################################################################################
     # Utilities
     def _check_scalar(self):
