@@ -384,3 +384,21 @@ class FortranFile(file):
                 return
             except NoMoreRecords:
                 return
+
+    def index(self):
+        """Return the self.tell() value for each record in a list
+        If successful,
+        The first entry will be 0, the begining of the file, and
+        the last entry will seek to the end of the file.
+        Intermediate values, index[n], seek to the begining of the (n+1)th record.
+        """
+        self.seek(0)
+        index = [self.tell()]
+        while(True):
+            try:
+                self.skipRecord()
+            except NoMoreRecords:
+                return index
+            else:
+                index.append(self.tell())
+            
