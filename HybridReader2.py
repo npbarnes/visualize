@@ -1,5 +1,4 @@
 #!/usr/bin/python
-from pprint import pprint
 import FortranFile as ff
 import numpy as np
 from os import SEEK_SET,SEEK_CUR,SEEK_END
@@ -17,6 +16,7 @@ class HybridError(ValueError):
 class HybridReader2:
     def __init__(self, prefix, variable, mode='r', double=False):
         self.doublereals = double
+        self.mode = mode
 
         if double:
             self.real_prec = 'd'
@@ -123,6 +123,14 @@ class HybridReader2:
 
         return m, data
 
+    def get_timestep(self, n):
+        if n == -1:
+            return self.get_last_timestep()
+        else:
+            for n in range(n-1):
+                self.skip_next_timestep()
+            return den.get_next_timestep()
+
     def skip_next_timestep(self):
         map(lambda x: x.skipRecord(),self.handles)
         map(lambda x: x.skipRecord(),self.handles)
@@ -167,32 +175,21 @@ class HybridReader2:
         return ret
     
     def repair_and_reset(self):
-        if self.mode != 'r+':
-            raise HybridError('Cannot repair unless mode is r+')
-
+        # Start at the begining
         map(lambda x:x.seek(0, SEEK_SET), self.handles)
-        count = 0
-        while(True):
-            # First see if there is an error with the step number.
-            try:
-                map(lambda x: x.skipRecord(),self.handles)
-            except IOError:
-                err_in_m = True
-                break
-            # Then see if there is an error with the values.
-            try:
-                map(lambda x: x.skipRecord(),self.handles)
-            except IOError:
-                err_in_m = False
-                break
-            count += 1
-            print(count)
-
-        if not err_in_m:
-            # If the step number was fine, but the data was bad then we need to skip back to the
-            # begining of the step number before truncating.
-            map(lambda x: x.skipBackRecord(),self.handles)
-        map(lambda x: x.truncate(),self.handles)
+        # Repair all handles
+        map(lambda x:x.repair(), self.handles)
+        # Go back to the begining
+        map(lambda x:x.seek(0, SEEK_SET), self.handles)
+        # If a file is left with a hanging step number without cooresponding data then remove it
+        # index will have an even length if there is a hanging step number
+        which_odd = map(lambda x:len(x.index())%2, self.handles)
+        for i,odd in enumerate(which_odd):
+            if not odd:
+                self.handles[i].skipBackRecord()
+                self.handles[i].truncate()
+        
+        # Go back the the begining
         map(lambda x:x.seek(0, SEEK_SET), self.handles)
 
     def __del__(self):
