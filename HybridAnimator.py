@@ -5,7 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import HybridReader2 as hr
 from matplotlib.widgets import Slider, RadioButtons, Button, CheckButtons
-from matplotlib.colors import Normalize, LogNorm
+from matplotlib.colors import Normalize, LogNorm, SymLogNorm
 import matplotlib.animation as animation
 from scipy.interpolate import RegularGridInterpolator
 from bisect import bisect
@@ -30,13 +30,20 @@ class StoppableFrames:
             return self
 
 class HybridAnimator():
-    def __init__(self,prefix,variable,save=False):
+    def __init__(self,prefix,variable, coordinate=None,save=False):
         # Read hybrid files
         self.prefix = prefix
         self.variable = variable
+        self.coordinate = coordinate
         self.save = save
 
+
         self.h = hr.HybridReader2(self.prefix,self.variable)
+
+        if self.h.isScalar and self.coordinate is not None:
+            raise ValueError("Don't specify a coordinate for scalars.")
+        if not self.h.isScalar and self.coordinate is None:
+            raise ValueError("Must specify a coordinate for vectors.")
 
         # Grab some of the parameters directly from there to be used
         # to compute some extra parameters
@@ -68,8 +75,6 @@ class HybridAnimator():
         self.qy = (qy - qy[len(qy)/2])/self.Rp
         self.qzrange = (qzrange - qzrange[len(qzrange)/2])/self.Rp
 
-
-
         # get figure and axes objects
         self.fig, (self.ax1, self.ax2) = plt.subplots(1, 2, sharex=True, sharey=True)
         self.ax1.set_aspect('equal', adjustable='box-forced')
@@ -83,15 +88,21 @@ class HybridAnimator():
         self.ax2.set_xlabel('X')
         self.ax2.set_ylabel('Z')
 
-        data_slice = self.h.get_next_timestep()[-1][:,:,self.cz]
+        if self.h.isScalar:
+            data_slice = self.h.get_next_timestep()[-1][:,:,self.cz]
+        else:
+            data_slice = self.h.get_next_timestep()[-1][:,:,self.cz,self.coordinate]
         X,Y = np.meshgrid(self.qx,self.qy)
         #self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e11, vmax=1e13)
-        self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
+        self.artist_xy = self.ax1.pcolormesh(X,Y,data_slice.transpose(), cmap=cmaps.viridis, norm=SymLogNorm(.001))
 
-        data_slice = self.h.get_next_timestep()[-1][:,self.cy,:]
+        if self.h.isScalar:
+            data_slice = self.h.get_next_timestep()[-1][:,self.cy,:]
+        else:
+            data_slice = self.h.get_next_timestep()[-1][:,self.cy,:,self.coordinate]
         X,Z = np.meshgrid(self.qx,self.qzrange)
         #self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm(), vmin=1e11, vmax=1e13)
-        self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=LogNorm())
+        self.artist_xz = self.ax2.pcolormesh(X,Z,data_slice.transpose(), cmap=cmaps.viridis, norm=SymLogNorm(.001))
 
         self.fig.colorbar(self.artist_xy, ax=self.ax1)
         self.fig.colorbar(self.artist_xz, ax=self.ax2)
@@ -112,6 +123,8 @@ class HybridAnimator():
         if self.reading_data:
             try:
                 data = self.h.get_next_timestep()[-1]
+                if not self.h.isScalar:
+                    data = data[:,:,:,self.coordinate]
             except ff.NoMoreRecords:
                 # done reading in the data
                 if self.save:
