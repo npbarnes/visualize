@@ -129,7 +129,7 @@ class HybridReader2:
         else:
             for n in range(n-1):
                 self.skip_next_timestep()
-            return den.get_next_timestep()
+            return self.get_next_timestep()
 
     def skip_next_timestep(self):
         map(lambda x: x.skipRecord(),self.handles)
