@@ -23,7 +23,7 @@ class HybridReader2:
         else:
             self.real_prec = 'f'
 
-        self.var = variable
+        self.var = variable.name
         self.hp = HybridParams(prefix)
         self.para = self.hp.para
 
