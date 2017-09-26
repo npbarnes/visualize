@@ -142,17 +142,26 @@ class FortranFile(file):
             raise NoMoreRecords
         if len(indicator_str) < self._header_length:
             raise IntegrityError('Could not read the leading size indicator. Not enough bytes.')
-        return numpy.fromstring(indicator_str,
+        indicator = numpy.fromstring(indicator_str,
                                 dtype=self.ENDIAN+self.HEADER_PREC
                                )[0]
+        if indicator < 0:
+            raise IntegrityError('Invalid leading size indicator. Sizes must be non-negative.')
+
+        return indicator
 
     def _read_trailing_indicator(self):
         indicator_str = self.read(self._header_length)
         if len(indicator_str) < self._header_length:
             raise IntegrityError('Could not read the trailing size indicator. Not enough bytes.')
-        return numpy.fromstring(indicator_str,
+        indicator = numpy.fromstring(indicator_str,
                                 dtype=self.ENDIAN+self.HEADER_PREC
                                )[0]
+
+        if indicator < 0:
+            raise IntegrityError('Invalid trailing size indicator. Sizes must be non-negative.')
+
+        return indicator
 
     def _write_check(self, number_of_bytes):
         """Write the header for the given number of bytes"""
