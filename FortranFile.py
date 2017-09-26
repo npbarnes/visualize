@@ -390,9 +390,9 @@ class FortranFile(file):
             except IntegrityError:
                 self.seek(startpos)
                 self.truncate()
-                return
+                return True
             except NoMoreRecords:
-                return
+                return False
 
     def index(self):
         """Return the self.tell() value for each record in a list
