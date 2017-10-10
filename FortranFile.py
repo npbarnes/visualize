@@ -378,36 +378,40 @@ class FortranFile(file):
         dtype = numpy.dtype(dtype)
         return numpy.fromstring(data_str, dtype=dtype)
 
-    def repair(self):
-        """Read records until one has an IntegrityError then truncate the file at the end of the last good record.
-        Leave the file position at the end of the file.
-        """
+    def _index(self, repair=False):
+        self.seek(0)
+        index = [self.tell()]
+        truncated = False
         while(True):
-            startpos = self.tell()
-
             try:
                 self.skipRecord()
-            except IntegrityError:
-                self.seek(startpos)
-                self.truncate()
-                return True
             except NoMoreRecords:
-                return False
+                return index, truncated
+            except IntegrityError:
+                if repair:
+                    self.seek(index[-1])
+                    self.truncate()
+                    truncated = True
+                    # This way, the next iteration will raise NoMoreRecords
+                else:
+                    raise
+            else:
+                index.append(self.tell())
 
-    def index(self):
+    def repair(self):
+        """Read records until one has an IntegrityError then truncate the file at the end of the last good record.
+        Leave the file position at the end of the file. Return a boolean indicating if the file was truncated.
+        """
+        return self._index(repair=True)[1]
+
+    def index(self, repair=False):
         """Return the self.tell() value for each record in a list
         If successful,
         The first entry will be 0, the begining of the file, and
         the last entry will seek to the end of the file.
         Intermediate values, index[n], seek to the begining of the (n+1)th record.
         """
-        self.seek(0)
-        index = [self.tell()]
-        while(True):
-            try:
-                self.skipRecord()
-            except NoMoreRecords:
-                return index
-            else:
-                index.append(self.tell())
-            
+        if repair:
+            return self._index(repair)
+        else:
+            return self._index(repair)[0]
