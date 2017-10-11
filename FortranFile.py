@@ -57,15 +57,6 @@ class IntegrityError(Exception):
 class NoMoreRecords(Exception):
     pass
 
-class IncompleteRead(Exception):
-    """Raised when _read_exactly fails to read exactly the correct number of bytes"""
-    def __init__(self, *args):
-        super(IntegrityError,self).__init__(*args)
-        if len(args) == 2:
-            self.bytes_expected = args[0]
-            self.bytes_read = args[1]
-
-
 class FortranFile(file):
 
     """File with methods for dealing with fortran unformatted data files"""
