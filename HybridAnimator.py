@@ -82,7 +82,7 @@ class HybridAnimator():
         self.fig.subplots_adjust(hspace=0, wspace=0)
 
         # set the title
-        self.ax1.set_title("Density")
+        self.ax1.set_title(self.variable)
         self.ax1.set_xlabel('X')
         self.ax1.set_ylabel('Y')
         self.ax2.set_xlabel('X')
