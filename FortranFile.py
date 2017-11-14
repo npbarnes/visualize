@@ -59,7 +59,7 @@ class IntegrityError(Exception):
 class NoMoreRecords(Exception):
     pass
 
-class FortranFile:
+class FortranFile(file):
 
     """File with methods for dealing with fortran unformatted data files"""
 
@@ -116,13 +116,13 @@ class FortranFile:
             default integer).
 
         """
-        self.ff = open(fname, *args, **kwargs)
+        file.__init__(self, fname,  *args, **kwargs)
         self.ENDIAN = endian
         self.HEADER_PREC = header_prec
 
     def _read_data(self, num_bytes):
         """Read in exactly num_bytes, raising an error if it can't be done."""
-        data = self.ff.read(num_bytes)
+        data = self.read(num_bytes)
         l = len(data)
         if l < num_bytes:
             raise IntegrityError('Could not read enough data. Wanted %d bytes, got %d.' % (num_bytes, l))
@@ -130,7 +130,7 @@ class FortranFile:
         return data
 
     def _read_leading_indicator(self):
-        indicator_str = self.ff.read(self._header_length)
+        indicator_str = self.read(self._header_length)
         if len(indicator_str) == 0:
             raise NoMoreRecords
         if len(indicator_str) < self._header_length:
@@ -144,7 +144,7 @@ class FortranFile:
         return indicator
 
     def _read_trailing_indicator(self):
-        indicator_str = self.ff.read(self._header_length)
+        indicator_str = self.read(self._header_length)
         if len(indicator_str) < self._header_length:
             raise IntegrityError('Could not read the trailing size indicator. Not enough bytes.')
         indicator = numpy.fromstring(indicator_str,
@@ -158,7 +158,7 @@ class FortranFile:
 
     def _write_check(self, number_of_bytes):
         """Write the header for the given number of bytes"""
-        self.ff.write(numpy.array(number_of_bytes, 
+        self.write(numpy.array(number_of_bytes, 
                                dtype=self.ENDIAN+self.HEADER_PREC,).tostring()
                   )
 
@@ -174,35 +174,35 @@ class FortranFile:
 
     def readBackRecord(self):
         """Read the fortran record just before the current file position"""
-        if self.ff.tell() == 0:
+        if self.tell() == 0:
             raise NoMoreRecords
-        if self.ff.tell() < 2*self._header_length:
+        if self.tell() < 2*self._header_length:
             raise IntegrityError('Not enough space for any record before this position.')
-        self.ff.seek(-self._header_length,os.SEEK_CUR)
+        self.seek(-self._header_length,os.SEEK_CUR)
         l = self._read_trailing_indicator()
-        if self.ff.tell() < 2*self._header_length + l:
+        if self.tell() < 2*self._header_length + l:
             raise IntegrityError('Not enough space for a record of the indicated size before this position.')
-        self.ff.seek(-(2*self._header_length + l),os.SEEK_CUR)
-        pos = self.ff.tell()
+        self.seek(-(2*self._header_length + l),os.SEEK_CUR)
+        pos = self.tell()
         check_size = self._read_leading_indicator()
         if check_size != l:
             raise IntegrityError('Leading size indicator (%d bytes) does not match trailing size'
                                  ' indicator (%d bytes).' % (check_size, l))
         data_str = self._read_data(l)
-        self.ff.seek(pos,os.SEEK_SET)
+        self.seek(pos,os.SEEK_SET)
         return data_str
 
     def skipRecord(self):
         """Skip over a single fortran record"""
         l = self._read_leading_indicator()
-        pos = self.ff.tell()
-        self.ff.seek(0,os.SEEK_END)
-        endpos = self.ff.tell()
+        pos = self.tell()
+        self.seek(0,os.SEEK_END)
+        endpos = self.tell()
         if pos+l > endpos:
             raise IntegrityError('Not enough data left in the file for another record.'
                                  ' Need %d bytes, only %d available.' % (2*self._header_length + l,
                                                                         endpos-pos+self._header_length))
-        self.ff.seek(pos+l,os.SEEK_SET)
+        self.seek(pos+l,os.SEEK_SET)
         check_size = self._read_trailing_indicator()
 
         if check_size != l:
@@ -210,22 +210,22 @@ class FortranFile:
                                  ' indicator (%d bytes).' % (l, check_size))
 
     def skipBackRecord(self):
-        if self.ff.tell() == 0:
+        if self.tell() == 0:
             raise NoMoreRecords
-        if self.ff.tell() < 2*self._header_length:
+        if self.tell() < 2*self._header_length:
             raise IntegrityError('Not enough space for any record before this position.')
-        self.ff.seek(-self._header_length,os.SEEK_CUR)
+        self.seek(-self._header_length,os.SEEK_CUR)
         l = self._read_trailing_indicator()
-        if self.ff.tell() < 2*self._header_length + l:
+        if self.tell() < 2*self._header_length + l:
             raise IntegrityError('Not enough space for a record of the indicated size before this position.')
-        self.ff.seek(-(2*self._header_length + l),os.SEEK_CUR)
-        pos = self.ff.tell()
+        self.seek(-(2*self._header_length + l),os.SEEK_CUR)
+        pos = self.tell()
         check_size = self._read_leading_indicator()
         if check_size != l:
             raise IntegrityError('Leading size indicator (%d bytes) does not match trailing size'
                                  ' indicator (%d bytes).' % (check_size, l))
 
-        self.ff.seek(pos,os.SEEK_SET)
+        self.seek(pos,os.SEEK_SET)
 
     def writeRecord(self,s):
         """Write a record with the given bytes.
@@ -237,7 +237,7 @@ class FortranFile:
         """
         length_bytes = len(s)
         self._write_check(length_bytes)
-        self.ff.write(s)
+        self.write(s)
         self._write_check(length_bytes)
 
     def readString(self):
@@ -372,8 +372,8 @@ class FortranFile:
         return numpy.fromstring(data_str, dtype=dtype)
 
     def _index(self, repair=False):
-        self.ff.seek(0)
-        index = [self.ff.tell()]
+        self.seek(0)
+        index = [self.tell()]
         truncated = False
         while(True):
             try:
@@ -382,14 +382,14 @@ class FortranFile:
                 return index, truncated
             except IntegrityError:
                 if repair:
-                    self.ff.seek(index[-1])
-                    self.ff.truncate()
+                    self.seek(index[-1])
+                    self.truncate()
                     truncated = True
                     # This way, the next iteration will raise NoMoreRecords
                 else:
                     raise
             else:
-                index.append(self.ff.tell())
+                index.append(self.tell())
 
     def repair(self):
         """Read records until one has an IntegrityError then truncate the file at the end of the last good record.
@@ -408,6 +408,3 @@ class FortranFile:
             return self._index(repair)
         else:
             return self._index(repair)[0]
-
-    def seek(self, *args, **kwargs):
-        self.ff.seek(*args, **kwargs)
