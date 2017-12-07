@@ -240,6 +240,7 @@ class HybridParams:
         for i in range(allParams['num_proc']):
             qzrange[i*nz-2*i+2:(i+1)*nz-2*(i+1)+2] = qzrange[i*nz-2*i]+qz[2:]
 
+        allParams['simulation_height'] = qzrange[-2]
         # Cut the last two for periodic boundaries
         allParams['qzrange'] = qzrange[:-2]
 
