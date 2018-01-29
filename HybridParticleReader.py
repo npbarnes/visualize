@@ -12,75 +12,10 @@ def pluto_position(p):
     return p['qx'][p['nx']/2 + p['pluto_offset']]
 
 def particle_data(hybrid_folder, n=0):
-    para = HybridParams.HybridParams(hybrid_folder).para
+    hybrid_folder, data_folder = os.path.split(hybrid_folder)
+    hpr = HybridParticleReader(hybrid_folder, n, data_folder=data_folder)
 
-    if para['num_proc'] % 2 == 0:
-        raise NotImplemented("Tell Nathan he needs to write the code for concatenating an even number of processors")
-    else:
-        center = int(math.ceil(para['num_proc']/2.0))
-
-        pp = pluto_position(para)
-
-        x_list = []
-        v_list = []
-        mrat_list = []
-        beta_list = []
-        tags_list = []
-        for offset in (range(-n,n+1) if isinstance(n,int) else n):
-            cur_rank = center+offset
-            from_bottom = para['num_proc'] - cur_rank
-
-            _, x, v, mrat, beta, tags = read_particle_files(hybrid_folder, cur_rank)
-
-            # Convert processor local coordinate to pluto coordinates
-            x[:,0] -= pp
-            x[:,1] -= np.max(para['qy'])/2
-            x[:,2] += np.max(para['qz'])*from_bottom - from_bottom*para['delz'] - np.max(para['qzrange'])/2
-
-            x_list.append(x)
-            v_list.append(v)
-            mrat_list.append(mrat)
-            beta_list.append(beta)
-            tags_list.append(tags)
-
-        ret_x = np.concatenate(x_list)
-        ret_v = np.concatenate(v_list)
-        ret_mrat = np.concatenate(mrat_list)
-        ret_beta = np.concatenate(beta_list)
-        ret_tags = np.concatenate(tags_list)
-
-    return para, ret_x, ret_v, ret_mrat, ret_beta, ret_tags
-
-def read_particle_files(hybrid_folder, procnum, dtype=np.float64):
-    """Read datafiles"""
-    para = HybridParams.HybridParams(hybrid_folder).para
-
-    xp_file = ff.FortranFile(join(hybrid_folder,'particle','c.xp_{}.dat'.format(procnum)))
-    vp_file = ff.FortranFile(join(hybrid_folder,'particle','c.vp_{}.dat'.format(procnum)))
-    mrat_file = ff.FortranFile(join(hybrid_folder,'particle','c.mrat_{}.dat'.format(procnum)))
-    beta_p_file = ff.FortranFile(join(hybrid_folder,'particle','c.beta_p_{}.dat'.format(procnum)))
-    tags_file = ff.FortranFile(join(hybrid_folder,'particle','c.tags_{}.dat'.format(procnum)))
-
-    xp_file.seek(0,os.SEEK_END)
-    vp_file.seek(0,os.SEEK_END)
-    mrat_file.seek(0,os.SEEK_END)
-    beta_p_file.seek(0,os.SEEK_END)
-    tags_file.seek(0,os.SEEK_END)
-
-    xp = xp_file.readBackReals().reshape((-1, 3), order='F')
-    vp = vp_file.readBackReals().reshape((-1, 3), order='F')
-    mrat = mrat_file.readBackReals()
-    beta_p = beta_p_file.readBackReals()
-    tags = tags_file.readBackReals()
-
-    xp_file.close()
-    vp_file.close()
-    mrat_file.close()
-    beta_p_file.close()
-    tags_file.close()
-
-    return (para, xp.astype(dtype), vp.astype(dtype), mrat.astype(dtype),
-                    para['beta']*beta_p.astype(dtype), tags)
+    return hpr.x.para, hpr.x[-1], hpr.v[-1], hpr.mrat[-1], hpr.beta[-1], hpr.tags[-1]
 
 class CombinedParticleData:
     @property
@@ -102,13 +37,18 @@ class CombinedParticleData:
 
         self._build_indexes()
 
+        self.numsteps = len(self.indexes[0])
+
         self.cache = {}
 
     def __getitem__(self, step):
+        if step < 0:
+            step = self.numsteps + step
+
         if step not in self.cache:
             for index,f in zip(self.indexes, self.files):
                 f.seek( index[step] )
-            self.cache[step] = self.combine( [ f.readReals() for f in self.files ] )
+            self.cache[step] = self.combine( [ f.readReals().astype(np.float64) for f in self.files ] )
 
         return self.cache[step]
 
@@ -128,7 +68,8 @@ class xp(CombinedParticleData):
         lst = []
         for cur_proc, d in zip(self.procs, raw_data):
             dd = d.reshape((-1,3), order='F')
-            from_bottom = self.para['num_proc'] - (cur_proc)
+            #from_bottom = self.para['num_proc'] - cur_proc
+            from_bottom = cur_proc - 1
 
             dd[:,0] -= pp
             dd[:,1] -= np.max(self.para['qy'])/2
