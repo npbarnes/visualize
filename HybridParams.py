@@ -155,7 +155,7 @@ class HybridParams:
         assert len(record)==1
         para.update({'mrestart':record[0]})
 
-        record = f.readReals()
+        record = f.readInts()
         assert len(record)==1
         # ri0 is the older name for this that shouldn't be used because it looks too similar to the parameter RIo
         # which is also old (radius of the moon Io even though we simulate pluto now).
