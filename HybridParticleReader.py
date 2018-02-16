@@ -41,6 +41,9 @@ class CombinedParticleData:
 
         self.cache = {}
 
+    def __len__(self):
+        return self.numsteps
+
     def __getitem__(self, step):
         if step < 0:
             step = self.numsteps + step
