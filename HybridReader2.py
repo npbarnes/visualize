@@ -46,10 +46,11 @@ class HybridReader2:
         else:
             realsize = 4
         h = self.handles[0]
+        s = h.tell()
         # skip timestep number
         h.skipRecord()
         size = h._read_leading_indicator()
-        h.seek(0)
+        h.seek(s)
         number = size/realsize
         if number == self.para['nx']*self.para['ny']*self.para['nz']:
             return True
