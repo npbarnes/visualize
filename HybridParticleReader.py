@@ -7,8 +7,6 @@ from os.path import join
 
 def pluto_position(p):
     """get the position of pluto in simulation coordinates"""
-    print("HybridParticleReader: setting pluto_offset to 30 since hpara is wrong")
-    p['pluto_offset'] = 30
     return p['qx'][p['nx']/2 + p['pluto_offset']]
 
 def particle_data(hybrid_folder, n=0):
