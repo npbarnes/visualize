@@ -157,6 +157,11 @@ class HybridParams:
 
         record = f.readInts()
         assert len(record)==1
+        # Do a quick sanity check since some older runs have this stored as a real insead of an int.
+        if record[0] > 100 or record[0] < 0:
+            f.skipBackRecord()
+            record = f.readReals()
+            assert len(record)==1
         # ri0 is the older name for this that shouldn't be used because it looks too similar to the parameter RIo
         # which is also old (radius of the moon Io even though we simulate pluto now).
         para.update({'pluto_offset':int(record[0]), 'ri0':record[0]}) 
