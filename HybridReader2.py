@@ -155,12 +155,15 @@ class HybridReader2:
         return m, data
 
     def get_timestep(self, n):
-        if n == -1:
-            return self.get_last_timestep()
+        if n < 0:
+            map(lambda x:x.seek(0,SEEK_END), self.handles)
+            for n in range(-n):
+                self.skip_back_timestep()
         else:
             for n in range(n-1):
                 self.skip_next_timestep()
-            return self.get_next_timestep()
+
+        return self.get_next_timestep()
 
     def skip_next_timestep(self):
         map(lambda x: x.skipRecord(),self.handles)
