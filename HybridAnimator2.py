@@ -132,4 +132,4 @@ if args.save:
                     func=update_animation, interval=1, blit=True, repeat=False)
     ani.save(args.save + '.mp4', fps=args.framerate, bitrate=5000, writer='ffmpeg')
 else:
-    raise NotImplemented("You must save the animation and view separately. Directly viewing is not supported.")
+    raise RuntimeError("You must save the animation with the --save flag and view separately. Directly viewing is not supported.")
