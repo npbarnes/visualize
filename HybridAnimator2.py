@@ -99,7 +99,7 @@ if args.variable.name == 'beta':
         return artist_xy.collections + artist_xz.collections
 else:
     # Get starting data
-    h = hr(args.prefix,args.variable.name, stupid=True)
+    h = hr(args.prefix,args.variable.name)
 #    for i in range(193):
 #        h.skip_next_timestep()
     data = h.get_next_timestep()[-1]
