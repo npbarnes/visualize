@@ -249,5 +249,15 @@ class HybridParams:
         # Cut the last two for periodic boundaries
         allParams['qzrange'] = qzrange[:-2]
 
+        # Get grid points in pluto centered coords
+        def pluto_position(p):
+            """get the position of pluto in simulation coordinates"""
+            return p['qx'][p['nx']/2 + p['pluto_offset']]
+
+        qx = allParams['qx'] - pluto_position(allParams)
+        qy = allParams['qy'] - np.max(allParams['qy'])/2
+        qz = allParams['qzrange'] - allParams['qzrange'][-1]/2
+
+        allParams['grid_points'] = qx, qy, qz
 
         return allParams
