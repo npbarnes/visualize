@@ -113,6 +113,19 @@ class beta_p(SimpleParticleData):
 class tags(SimpleParticleData):
     varname = 'tags'
 
+class Particles:
+    def filter(self, filt_arr, out=None):
+        if out is None:
+            out = Particles()
+
+        out.x = self.x[filt_arr]
+        out.v = self.v[filt_arr]
+        out.mrat = self.mrat[filt_arr]
+        out.beta = self.beta[filt_arr]
+        out.tags = self.tags[filt_arr]
+
+        return out
+
 class HybridParticleReader:
     def __init__(self, folder, n=0, data_folder='data'):
         self.x = xp(folder, n, data_folder)
@@ -121,4 +134,17 @@ class HybridParticleReader:
         self.beta_p = beta_p(folder, n, data_folder)
         self.mrat = mrat(folder, n, data_folder)
         self.tags = tags(folder, n, data_folder)
+
+class LastStep(Particles):
+    def __init__(self, folder, n=0, data_folder='data'):
+        hpr = HybridParticleReader(folder, n, data_folder=data_folder)
+
+        self.para = hpr.x.para
+        self.x = hpr.x[-1]
+        self.v = hpr.v[-1]
+        self.mrat = hpr.mrat[-1]
+        self.beta = hpr.beta[-1]
+        self.tags = hpr.tags[-1]
+
+
 
