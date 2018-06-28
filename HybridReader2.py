@@ -169,6 +169,9 @@ class HybridReader2:
         map(lambda x: x.skipRecord(),self.handles)
         map(lambda x: x.skipRecord(),self.handles)
 
+    def skip_back_timestep(self):
+        map(lambda x: x.skipBackRecord(),self.handles)
+        map(lambda x: x.skipBackRecord(),self.handles)
 
     def get_prev_timestep(self):
         """Returns the previous timestep number and data leaving the file position before that timestep record"""
