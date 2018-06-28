@@ -108,8 +108,8 @@ else:
     para = h.para
 
     # Make initial plots
-    artist_xy = direct_plot(fig1, ax1, data, para, 'xy', cmap=args.colormap, norm=args.norm, vmin=args.vmin, vmax=args.vmax, mccomas=args.mccomas)
-    artist_xz = direct_plot(fig2, ax2, data, para, 'xz', cmap=args.colormap, norm=args.norm, vmin=args.vmin, vmax=args.vmax, mccomas=args.mccomas)
+    artist_xy = direct_plot(fig1, ax1, data, para, 'xy', cmap=args.colormap, norm=args.norm, vmin=args.vmin, vmax=args.vmax, mccomas=args.mccomas)[0]
+    artist_xz = direct_plot(fig2, ax2, data, para, 'xz', cmap=args.colormap, norm=args.norm, vmin=args.vmin, vmax=args.vmax, mccomas=args.mccomas)[0]
 
     def update_animation(frame):
         try:
