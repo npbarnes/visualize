@@ -13,6 +13,9 @@ from HybridParams import HybridParams
 class HybridError(ValueError):
     pass
 
+class NoSuchVariable(HybridError):
+    pass
+
 class HybridReader2:
     def __init__(self, prefix, variable, mode='r', double=False):
         self.doublereals = double
@@ -30,9 +33,10 @@ class HybridReader2:
         self.filename_format_string = 'c\.{}_3d_(\d+)\.dat'.format(self.var)
         self.rx = re.compile(self.filename_format_string)
 
-
         self.paths = map(partial(join, self.hp.grid), self.sort_filenames())
         self.handles = map(partial(ff.FortranFile, mode=mode),self.paths)
+        if len(self.paths) == 0:
+            raise NoSuchVariable()
         self.isScalar = self._check_scalar()
 
     def restart(self):
