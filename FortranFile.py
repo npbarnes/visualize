@@ -369,6 +369,8 @@ class FortranFile(file):
     def readOther(self, dtype):
         data_str = self.readRecord()
         dtype = numpy.dtype(dtype)
+        #if len(data_str) % dtype.itemsize != 0:
+            #raise IntegrityError
         return numpy.fromstring(data_str, dtype=dtype)
 
     def _index(self, repair=False):

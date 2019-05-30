@@ -15,10 +15,11 @@ class VersionError(ParameterReadError):
     pass
 
 class HybridParams:
-    def __init__(self,prefix):
+    def __init__(self,prefix, force_version=None):
         self.prefix = prefix
         self.grid = join(prefix,'grid')
         self.particle = join(prefix,'particle')
+        self.force_version = force_version
 
         self.para = self._getParameters()
 
@@ -45,6 +46,10 @@ class HybridParams:
         else:
             # Otherwise, add the indicated version to the dictionary.
             para.update({'para_dat_version':record[0]})
+        if self.force_version is not None:
+            self.version = self.force_version
+        else:
+            self.version = para['para_dat_version']
 
         # This will be the first record in old versions of para.dat
         record = f.readOther([  ('nx',np.int32),
@@ -75,9 +80,14 @@ class HybridParams:
         assert len(record)==1
         para.update({'Ni_max':record[0]})
 
-        record = f.readOther([  ('mproton',np.float64),
-                            ('m_pu',np.float64),
-                            ('m_heavy',np.float32)])
+        if self.version <= 3:
+            record = f.readOther([  ('mproton',np.float64),
+                                ('m_pu',np.float64),
+                                ('m_heavy',np.float32)])
+        else:
+            record = f.readOther([  ('mproton',np.float32),
+                                ('m_pu',np.float32),
+                                ('m_heavy',np.float32)])
         assert len(record)==1
         para.update(zip(record.dtype.names,record[0]))
 
@@ -119,7 +129,10 @@ class HybridParams:
         assert len(record)==1
         para.update({'ion_amu':record[0]})
 
-        record = f.readReals('d')
+        if self.version <= 3:
+            record = f.readReals('d')
+        else:
+            record = f.readReals()
         assert len(record)==1
         para.update({'mpu':record[0]})
 
@@ -160,7 +173,7 @@ class HybridParams:
         # Do a quick sanity check since some older runs have this stored as a real insead of an int.
         if record[0] > 100 or record[0] < 0:
             f.skipBackRecord()
-            record = f.readReals()
+            record = f.readInts()
             assert len(record)==1
         # ri0 is the older name for this that shouldn't be used because it looks too similar to the parameter RIo
         # which is also old (radius of the moon Io even though we simulate pluto now).
@@ -252,7 +265,10 @@ class HybridParams:
         # Get grid points in pluto centered coords
         def pluto_position(p):
             """get the position of pluto in simulation coordinates"""
-            return p['qx'][p['nx']/2 + p['pluto_offset']]
+            try:
+                return p['qx'][p['nx']/2 + p['pluto_offset']]
+            except IndexError:
+                return 0.0
 
         qx = allParams['qx'] - pluto_position(allParams)
         qy = allParams['qy'] - np.max(allParams['qy'])/2
