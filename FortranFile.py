@@ -410,3 +410,17 @@ class FortranFile(file):
             return self._index(repair)
         else:
             return self._index(repair)[0]
+
+    def as_gen(self, step=1, dtype_prec=None):
+        while True:
+            try:
+                r = self.readRecord()
+                for i in range(step-1):
+                    self.skipRecord()
+            except NoMoreRecords:
+                break
+            if dtype_prec is None:
+                yield r
+            else:
+                yield numpy.fromstring(r, dtype=self.ENDIAN+dtype_prec)
+

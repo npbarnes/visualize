@@ -30,7 +30,7 @@ class HybridReader2:
         self.hp = HybridParams(prefix)
         self.para = self.hp.para
 
-        self.filename_format_string = 'c\.{}_3d_(\d+)\.dat'.format(self.var)
+        self.filename_format_string = '^c\.{}_3d_(\d+)\.dat$'.format(self.var)
         self.rx = re.compile(self.filename_format_string)
 
         self.paths = map(partial(join, self.hp.grid), self.sort_filenames())
@@ -231,6 +231,62 @@ class HybridReader2:
 
     def __del__(self):
         map(lambda x: x.close(),self.handles)
+
+
+def monotonic_step_iter(h, args=None):
+    # Read the first record
+    try:
+        m0, data0 = h.get_next_timestep()
+    except NoMoreRecords:
+        return
+    if not h.isScalar:
+        data0 = data0[:,:,:,args.variable.coordinate]
+    yield m0, data0
+
+    # Read the second record
+    try:
+        m1, data1 = h.get_next_timestep()
+    except NoMoreRecords:
+        return
+    # If m1 <= m0 then we have to keep searching until we get past m0
+    # This loop reads timesteps until it gets to one after m0
+    while m1 <= m0:
+        try:
+            m1, data1 = h.get_next_timestep()
+        except NoMoreRecords:
+            return
+    if not h.isScalar:
+        data1 = data1[:,:,:,args.variable.coordinate]
+    yield m1, data1
+
+    prev_m = m1
+    while True:
+        try:
+            m, data = h.get_next_timestep()
+        except NoMoreRecords:
+            return
+        if (m-prev_m) <= 0:
+            # Keep searching until we get past m_prev
+            continue
+        prev_m = m
+        if not h.isScalar:
+            data = data[:,:,:,args.variable.coordinate]
+        yield m, data
+
+def equal_spacing_step_iter(h, args=None):
+    iterator = monotonic_data_iter(h, args)
+    m0, data0 = next(iterator)
+    yield m0, data0
+
+    m1, data1 = next(iterator)
+    yield m1, data1
+
+    dm = m1 - m0
+    prev_m = m1
+    for m,data in iterator:
+        if m-prev_m != dm:
+            continue
+        yield m, data
 
 
 if __name__ == "__main__":
