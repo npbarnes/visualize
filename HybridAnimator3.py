@@ -1,5 +1,5 @@
 import numpy as np
-from HybridReader2 import HybridReader2 as hr, monotonic_step_iter
+from HybridReader2 import HybridReader2 as hr, monotonic_step_iter, equal_spacing_step_iter
 from FortranFile import NoMoreRecords
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -31,26 +31,13 @@ h = hr(args.prefix,args.variable.name)
 
 # Preload all the slices
 print "Loading data into memory"
-init_data = h.get_next_timestep()[-1]
-if not h.isScalar:
-    init_data = init_data[:,:,:,args.variable.coordinate]
-
-data_slices = {d:[
-    data_slice(h.para, init_data, d, coordinate=args.variable.coordinate)
-] for d in args.directions}
-while True:
-    try:
-        data = h.get_next_timestep()[-1]
-    except NoMoreRecords:
-        break
-    #data = h.get_next_timestep()[-1]
+all_data = []
+#for m, step_data in monotonic_step_iter(h):
+for m, step_data in equal_spacing_step_iter(h):
     if not h.isScalar:
-        data = data[:,:,:,args.variable.coordinate]
-
-    for d in args.directions:
-        s = data_slice(h.para, data, d, coordinate=args.variable.coordinate)
-        data_slices[d].append(s)
-n_frames = len(data_slices[args.directions[0]])
+        step_data = step_data[:,:,:,args.variable.coordinate]
+    all_data.append(step_data)
+n_frames = len(all_data)
 
 # Make the animations
 for (fig, ax), d in zip(make_figures(args), args.directions):
@@ -60,10 +47,10 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
     ax.set_ylim([-50,50])
     
     # Make the inital plot
-    artist = direct_plot(fig, ax, init_data, h.para, d, cmap=args.colormap, norm=args.norm, vmin=args.vmin, vmax=args.vmax, mccomas=args.mccomas)[0]
+    artist = direct_plot(fig, ax, all_data[0], h.para, d, cmap=args.colormap, norm=args.norm, vmin=args.vmin, vmax=args.vmax, mccomas=args.mccomas)[0]
     
     def update_animation(frame):
-        s = data_slices[d][frame]
+        s = data_slice(h.para, all_data[frame], d)
 
         # When changing the data for pcolormesh we need to remove the last element
         # in each direction for some reason.
