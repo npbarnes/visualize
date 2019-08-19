@@ -11,16 +11,12 @@ args = parse_cmd_line()
 
 if args.single_fig:
     print "Combined plots no longer supported"
-    print "Use --separate-figures, --xy, or --xz"
+    print "Use --separate-figures, --xy, --xz, or --yz"
     exit(1)
 
 def make_figures(args):
     ret = []
-    if args.xy:
-        ret.append(
-            plt.subplots(subplot_kw={'aspect':'equal'})
-        )
-    if args.xz:
+    for _ in args.directions:
         ret.append(
             plt.subplots(subplot_kw={'aspect':'equal'})
         )
