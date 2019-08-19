@@ -30,7 +30,7 @@ class HybridReader2:
         self.hp = HybridParams(prefix, force_version=force_version)
         self.para = self.hp.para
 
-        self.filename_format_string = 'c\.{}_3d_(\d+)\.dat'.format(self.var)
+        self.filename_format_string = '^c\.{}_3d_(\d+)\.dat$'.format(self.var)
         self.rx = re.compile(self.filename_format_string)
 
         self.paths = map(partial(join, self.hp.grid), self.sort_filenames())
@@ -76,6 +76,9 @@ class HybridReader2:
     def sort_filenames(self):
         names = self.filenames()
         names.sort(key=self._get_number,reverse=True)
+#        if self.var == 'np_He_shell':
+#            print "Warning: Number 176 has been replaced"
+#            names[-176] += '.replacement'
 
         return names
 
@@ -235,6 +238,43 @@ class HybridReader2:
 
     def __del__(self):
         map(lambda x: x.close(),self.handles)
+
+
+def monotonic_step_iter(h):
+    # Read the first timestep (number and data)
+    # If the file is empty, then just return
+    try:
+        m0, data0 = h.get_next_timestep()
+    except ff.NoMoreRecords:
+        return
+    yield m0, data0
+
+    # Read data until there are no more records
+    # Only yield the timestep when the step number is increasing
+    prev_m = m0
+    while True:
+        try:
+            m, data = h.get_next_timestep()
+        except ff.NoMoreRecords:
+            return
+        if m > prev_m:
+            prev_m = m
+            yield m, data
+
+def equal_spacing_step_iter(h):
+    iterator = monotonic_step_iter(h)
+    m0, data0 = next(iterator)
+    yield m0, data0
+
+    m1, data1 = next(iterator)
+    yield m1, data1
+
+    dm = m1 - m0
+    prev_m = m1
+    for m,data in iterator:
+        if m-prev_m == dm:
+            prev_m = m
+            yield m, data
 
 
 if __name__ == "__main__":
