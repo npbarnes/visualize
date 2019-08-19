@@ -17,7 +17,7 @@ class NoSuchVariable(HybridError):
     pass
 
 class HybridReader2:
-    def __init__(self, prefix, variable, mode='r', double=False):
+    def __init__(self, prefix, variable, mode='r', double=False, force_version=None):
         self.doublereals = double
         self.mode = mode
 
@@ -27,7 +27,7 @@ class HybridReader2:
             self.real_prec = 'f'
 
         self.var = variable
-        self.hp = HybridParams(prefix)
+        self.hp = HybridParams(prefix, force_version=force_version)
         self.para = self.hp.para
 
         self.filename_format_string = 'c\.{}_3d_(\d+)\.dat'.format(self.var)
@@ -95,19 +95,19 @@ class HybridReader2:
         while(True):
             try:# try to read the step number
                 ms.append(f.readInts()[0])
-            except IOError:# Error indicates EOF
+            except ff.NoMoreRecords:# Error indicates EOF
                 break
             f.skipRecord()# Skip the data record for this step
             
-        f.seek(start, os.SEEK_SET)
-        return ms
+        f.seek(start, SEEK_SET)
+        return np.array(ms)
 
     def get_next_timestep(self):
         """Returns the next timestep number and data leaving the file position after that data"""
         # read the time step record
         mrecords = np.array(map(lambda x: x.readInts(),self.handles))
         assert mrecords.shape == (len(self.handles),1)
-        assert np.all(mrecords == mrecords[0])
+        #assert np.all(mrecords == mrecords[0])
         m = mrecords[0]
 
         if self.isScalar:
@@ -194,22 +194,26 @@ class HybridReader2:
         return m, self.para['dt']*m, data
 
     def get_all_timesteps(self):
-        """Returns and array of structures containing step, time, and data for each saved timestep"""
+        """Return data from all timesteps and step numbers and physical times"""
         steps = self.get_saved_timesteps()
         nx = self.para['nx']
         ny = self.para['ny']
-        nz = self.para['nz']
         zrange = self.para['zrange']
-        dtype = np.dtype([('step',np.int32),('time',np.float32),('data',np.float32,(nx,ny,zrange))])
-        ret = np.empty(len(steps),dtype=dtype)
+        if self.isScalar:
+            ret = np.empty((len(steps), nx, ny, zrange), dtype=np.float32)
+        else:
+            ret = np.empty((len(steps), nx, ny, zrange, 3), dtype=np.float32)
 
         for n in range(len(steps)):
             m, data = self.get_next_timestep()
 
-            ret[n] = (steps[n],self.para['dt']*steps[n],data)
+            if self.isScalar:
+                ret[n,:,:,:] = data
+            else:
+                ret[n,:,:,:,:] = data
 
         map(lambda x: x.close(), self.handles)
-        return ret
+        return steps, np.array([self.para['dt']*m for m in steps]), ret
     
     def repair_and_reset(self):
         # Start at the begining
