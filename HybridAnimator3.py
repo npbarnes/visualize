@@ -48,7 +48,7 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
     if args.vmin is not None:
         vmin = args.vmin
     else:
-        vmin = min((np.min(d) for d in all_data))
+        vmin = min((np.min(d[d!=0]) for d in all_data))
     if args.vmax is not None:
         vmax = args.vmax
     else:
