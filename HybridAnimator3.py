@@ -11,8 +11,8 @@ parser.add_argument('--framerate', type=int, default=20)
 args = parse_cmd_line()
 
 if args.single_fig:
-    print "Combined plots no longer supported"
-    print "Use --separate-figures, --xy, --xz, or --yz"
+    print("Combined plots no longer supported")
+    print("Use --separate-figures, --xy, --xz, or --yz")
     exit(1)
 
 def make_figures(args):
@@ -27,7 +27,7 @@ def make_figures(args):
 h = hr(args.prefix,args.variable.name)
 
 # Preload all the slices
-print "Loading data into memory"
+print("Loading data into memory")
 all_data = []
 #for m, step_data in monotonic_step_iter(h):
 for m, step_data in equal_spacing_step_iter(h):
@@ -40,7 +40,7 @@ n_frames = len(all_data)
 
 # Make the animations
 for (fig, ax), d in zip(make_figures(args), args.directions):
-    print 'Animating {} plot'.format(d)
+    print('Animating {} plot'.format(d))
     ax.set_xlabel(d[0])
     ax.set_ylabel(d[1])
     #ax.set_ylim([-50,50])
