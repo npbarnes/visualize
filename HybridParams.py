@@ -1,8 +1,7 @@
 import FortranFile as ff
 from os import listdir
-from os.path import isfile,join
+from os.path import join
 import numpy as np
-from functools import partial
 import re
 
 class ParameterReadError(RuntimeError):
@@ -25,7 +24,7 @@ class HybridParams:
 
     def num_procs(self):
         """Count how many density files were output to get the number of processors"""
-        filename_format_string = 'c\.np_3d_(\d+)\.dat'
+        filename_format_string = r'c\.np_3d_(\d+)\.dat'
         rx = re.compile(filename_format_string)
         return len( [f for f in listdir(self.grid) if rx.match(f)] )
 
@@ -117,7 +116,7 @@ class HybridParams:
 
         # If there are no more records return what we do have
         # otherwise, continue.
-        try: 
+        try:
             record = f.readReals()
         except ff.NoMoreRecords:
             return para
@@ -177,7 +176,7 @@ class HybridParams:
             assert len(record)==1
         # ri0 is the older name for this that shouldn't be used because it looks too similar to the parameter RIo
         # which is also old (radius of the moon Io even though we simulate pluto now).
-        para.update({'pluto_offset':int(record[0]), 'ri0':record[0]}) 
+        para.update({'pluto_offset':int(record[0]), 'ri0':record[0]})
 
         record = f.readInts()
         assert len(record)==1
