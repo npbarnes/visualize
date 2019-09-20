@@ -33,14 +33,15 @@ class HybridReader2:
         self.filename_format_string = '^c\.{}_3d_(\d+)\.dat$'.format(self.var)
         self.rx = re.compile(self.filename_format_string)
 
-        self.paths = map(partial(join, self.hp.grid), self.sort_filenames())
-        self.handles = map(partial(ff.FortranFile, mode=mode),self.paths)
+        self.paths = [join(self.hp.grid, f) for f in self.sort_filenames()]
+        self.handles = [ff.FortranFile(p, mode=mode) for p in self.paths]
         if len(self.paths) == 0:
             raise NoSuchVariable()
         self.isScalar = self._check_scalar()
 
     def restart(self):
-        map(lambda x: x.seek(0), self.handles)
+        for h in self.handles:
+            h.seek(0)
 
     ######################################################################################
     # Utilities
@@ -108,19 +109,19 @@ class HybridReader2:
     def get_next_timestep(self):
         """Returns the next timestep number and data leaving the file position after that data"""
         # read the time step record
-        mrecords = np.array(map(lambda x: x.readInts(),self.handles))
+        mrecords = np.array([h.readInts() for h in self.handles])
         assert mrecords.shape == (len(self.handles),1)
         #assert np.all(mrecords == mrecords[0])
         m = mrecords[0]
 
         if self.isScalar:
             # (xyz)
-            flat_data = np.concatenate(map(lambda x:self._scalar_cut_overlap(x.readReals(self.real_prec)), self.handles))
+            flat_data = np.concatenate((self._scaler_cut_overlap(h.readReals(self.real_prec)) for h in self.handles))
             # (x,y,z)
             data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],self.para['zrange']],'F')
         else:
             # convert flattened data into 3d array of vectors
-            datalst = map(lambda x:x.readReals(self.real_prec), self.handles)
+            datalst = [h.readReals(self.real_prec) for h in self.handles]
             # shapes data from (p,xyzc) to (p,x,y,z,c)
             redatalst = np.reshape(datalst,[len(self.handles),self.para['nx'],self.para['ny'],self.para['nz'],3], 'F')
             cutOverlap = redatalst[:,:,:,:-2,:]
@@ -134,19 +135,19 @@ class HybridReader2:
     def get_bizaro_next_timestep(self):
         """Returns the next timestep number and data leaving the file position after that data"""
         # read the time step record
-        mrecords = np.array(map(lambda x: x.readInts(),self.handles))
+        mrecords = np.array((h.readInts() for h in self.handles))
         assert mrecords.shape == (len(self.handles),1)
         assert np.all(mrecords == mrecords[0])
         m = mrecords[0]
 
         if self.isScalar:
             # (xyz)
-            flat_data = np.concatenate(map(lambda x:x.readReals(self.real_prec), self.handles))
+            flat_data = np.concatenate((h.readReals(self.real_prec) for h in self.handles))
             # (x,y,z)
             data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],self.para['zrange']+2*self.para['num_proc']],'F')
         else:
             # convert flattened data into 3d array of vectors
-            datalst = map(lambda x:x.readReals(self.real_prec), self.handles)
+            datalst = [h.readReals(self.real_prec) for h in self.handles]
             # shapes data from (p,xyzc) to (p,x,y,z,c)
             redatalst = np.reshape(datalst,[len(self.handles),self.para['nx'],self.para['ny'],self.para['nz'],3], 'F')
             cutOverlap = redatalst[:,:,:,:-2,:]
@@ -159,7 +160,8 @@ class HybridReader2:
 
     def get_timestep(self, n):
         if n < 0:
-            map(lambda x:x.seek(0,SEEK_END), self.handles)
+            for h in self.handles:
+                h.seek(0, SEEK_END)
             for n in range(-n):
                 self.skip_back_timestep()
         else:
@@ -169,31 +171,30 @@ class HybridReader2:
         return self.get_next_timestep()
 
     def skip_next_timestep(self):
-        map(lambda x: x.skipRecord(),self.handles)
-        map(lambda x: x.skipRecord(),self.handles)
+        for h in self.handles:
+            h.skipRecord()
+            h.skipRecord()
 
     def skip_back_timestep(self):
-        map(lambda x: x.skipBackRecord(),self.handles)
-        map(lambda x: x.skipBackRecord(),self.handles)
+        for h in self.handles:
+            h.skipBackRecord()
+            h.skipBackRecord()
 
     def get_prev_timestep(self):
         """Returns the previous timestep number and data leaving the file position before that timestep record"""
-        # Skip back over the data and the timestep
-        map(lambda x: x.skipBackRecord(),self.handles)
-        map(lambda x: x.skipBackRecord(),self.handles)
-        # Read the data and timestep
+        self.skip_back_timestep()
         m, data = self.get_next_timestep()
-        # Skip back
-        map(lambda x: x.skipBackRecord(),self.handles)
-        map(lambda x: x.skipBackRecord(),self.handles)
+        self.skip_back_timestep()
 
         return m, data
 
     def get_last_timestep(self):
         """Returns time step number, time, and data for the last saved step of the simulation"""
-        map(lambda x:x.seek(0,SEEK_END), self.handles)
+        for h in self.handles:
+            h.seek(0, SEEK_END)
         m, data = self.get_prev_timestep()
-        map(lambda x:x.seek(0,SEEK_END), self.handles)
+        for h in self.handles:
+            h.seek(0, SEEK_END)
         return m, self.para['dt']*m, data
 
     def get_all_timesteps(self):
@@ -215,29 +216,31 @@ class HybridReader2:
             else:
                 ret[n,:,:,:,:] = data
 
-        map(lambda x: x.close(), self.handles)
+        for h in self.handles:
+            h.close()
         return steps, np.array([self.para['dt']*m for m in steps]), ret
     
     def repair_and_reset(self):
-        # Start at the begining
-        map(lambda x:x.seek(0, SEEK_SET), self.handles)
-        # Repair all handles
-        map(lambda x:x.repair(), self.handles)
-        # Go back to the begining
-        map(lambda x:x.seek(0, SEEK_SET), self.handles)
-        # If a file is left with a hanging step number without cooresponding data then remove it
-        # index will have an even length if there is a hanging step number
-        which_odd = map(lambda x:len(x.index())%2, self.handles)
-        for i,odd in enumerate(which_odd):
-            if not odd:
-                self.handles[i].skipBackRecord()
-                self.handles[i].truncate()
+        for h in self.handles:
+            # Start at the begining
+            h.seek(0, SEEK_SET)
+            # Repair
+            h.repair()
+            # Go back to the begining
+            h.seek(0, SEEK_SET)
+            # if there are an even number of entries in the index,
+            # then there is a hanging record number without any data
+            # so we remove it.
+            if len(h.index())%2 == 0:
+                h.skipBackRecord()
+                h.truncate()
+            # Finally, make sure we leave it at the begining
+            h.seek(0, SEEK_SET)
         
-        # Go back the the begining
-        map(lambda x:x.seek(0, SEEK_SET), self.handles)
 
     def __del__(self):
-        map(lambda x: x.close(),self.handles)
+        for h in self.handles:
+            h.close()
 
 
 def monotonic_step_iter(h):
