@@ -9,11 +9,15 @@ def pluto_position(p):
     """get the position of pluto in simulation coordinates"""
     return p['qx'][p['nx']//2 + p['pluto_offset']]
 
-def particle_data(hybrid_folder, n=0):
+def particle_data(hybrid_folder, n=0, step=-1):
     hybrid_folder, data_folder = os.path.split(hybrid_folder)
     hpr = HybridParticleReader(hybrid_folder, n, data_folder=data_folder)
 
-    return hpr.x.para, hpr.x[-1], hpr.v[-1], hpr.mrat[-1], hpr.beta[-1], hpr.tags[-1]
+    return hpr.x.para, hpr.x[step], hpr.v[step], hpr.mrat[step], hpr.beta[step], hpr.tags[step]
+
+def particle_data_dict(*args, **kwargs):
+    para, x, v, mrat, beta, tags = particle_data(*args, **kwargs)
+    return {'para':para, 'x':x, 'v':v, 'mrat':mrat, 'beta':beta, 'tags':tags}
 
 class CombinedParticleData:
     @property
@@ -29,9 +33,9 @@ class CombinedParticleData:
         self.para = HybridParams.HybridParams(join(folder, data_folder)).para
         self.center_proc = int(math.ceil(self.para['num_proc']/2.0))
         self.procs = [ self.center_proc + offset for offset in self.offsets ]
-        
+
         self.files = [ ff.FortranFile(join(folder,data_folder,'particle','c.{}_{}.dat'.format(self.varname, proc)))
-                                    for proc in self.procs ] 
+                                    for proc in self.procs ]
 
         self._build_indexes()
 
@@ -145,6 +149,3 @@ class LastStep(Particles):
         self.mrat = hpr.mrat[-1]
         self.beta = hpr.beta[-1]
         self.tags = hpr.tags[-1]
-
-
-
