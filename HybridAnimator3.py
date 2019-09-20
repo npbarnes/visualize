@@ -74,9 +74,9 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
     ani = animation.FuncAnimation(fig, frames=n_frames,
         func=update_animation, interval=100, blit=True)
     if h.isScalar:
-        namestring = '{var}_{d}.mp4'.format(var=args.variable.name, d=d)
+        namestring = '{var}_{d}.gif'.format(var=args.variable.name, d=d)
     else:
-        namestring = '{var}_{coor}_{d}.mp4'.format(var=args.variable.name, coor=args.variable.coordinate, d=d)
+        namestring = '{var}_{coor}_{d}.gif'.format(var=args.variable.name, coor=args.variable.coordinate, d=d)
     writer = animation.ImageMagickWriter(fps=12, bitrate=10000)
     ani.save(namestring, writer=writer)
 
