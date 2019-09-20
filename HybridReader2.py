@@ -116,7 +116,7 @@ class HybridReader2:
 
         if self.isScalar:
             # (xyz)
-            flat_data = np.concatenate((self._scaler_cut_overlap(h.readReals(self.real_prec)) for h in self.handles))
+            flat_data = np.concatenate([self._scalar_cut_overlap(h.readReals(self.real_prec)) for h in self.handles])
             # (x,y,z)
             data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],self.para['zrange']],'F')
         else:
