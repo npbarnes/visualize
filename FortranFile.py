@@ -52,6 +52,7 @@ __docformat__ = "restructuredtext en"
 
 import numpy
 import os
+import io
 
 class IntegrityError(Exception):
     pass
@@ -59,7 +60,7 @@ class IntegrityError(Exception):
 class NoMoreRecords(Exception):
     pass
 
-class FortranFile(file):
+class FortranFile(io.FileIO):
 
     """File with methods for dealing with fortran unformatted data files"""
 
@@ -80,6 +81,7 @@ class FortranFile(file):
             self._endian = c
         else:
             raise ValueError('Cannot set endian-ness')
+
     def _get_endian(self):
         return self._endian
     ENDIAN = property(fset=_set_endian,
@@ -92,6 +94,7 @@ class FortranFile(file):
             self._header_prec = prec
         else:
             raise ValueError('Cannot set header precision')
+
     def _get_header_prec(self):
         return self._header_prec
     HEADER_PREC = property(fset=_set_header_prec,
@@ -116,7 +119,7 @@ class FortranFile(file):
             default integer).
 
         """
-        file.__init__(self, fname,  *args, **kwargs)
+        super(FortranFile, self).__init__(fname,  *args, **kwargs)
         self.ENDIAN = endian
         self.HEADER_PREC = header_prec
 
@@ -158,7 +161,7 @@ class FortranFile(file):
 
     def _write_check(self, number_of_bytes):
         """Write the header for the given number of bytes"""
-        self.write(numpy.array(number_of_bytes, 
+        self.write(numpy.array(number_of_bytes,
                                dtype=self.ENDIAN+self.HEADER_PREC,).tostring()
                   )
 
@@ -267,10 +270,6 @@ class FortranFile(file):
 
         """
 
-        _numpy_precisions = {'d': numpy.float64,
-                             'f': numpy.float32
-                            }
-
         if prec not in self._real_precisions:
             raise ValueError('Not an appropriate precision')
 
@@ -313,7 +312,7 @@ class FortranFile(file):
 
         nums = numpy.array(reals, dtype=self.ENDIAN+prec)
         self.writeRecord(nums.tostring())
-    
+
     _int_precisions = 'hilq'
 
     def readInts(self, prec='i'):

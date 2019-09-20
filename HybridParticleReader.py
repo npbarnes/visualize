@@ -7,7 +7,7 @@ from os.path import join
 
 def pluto_position(p):
     """get the position of pluto in simulation coordinates"""
-    return p['qx'][p['nx']/2 + p['pluto_offset']]
+    return p['qx'][p['nx']//2 + p['pluto_offset']]
 
 def particle_data(hybrid_folder, n=0):
     hybrid_folder, data_folder = os.path.split(hybrid_folder)
@@ -18,10 +18,10 @@ def particle_data(hybrid_folder, n=0):
 class CombinedParticleData:
     @property
     def varname(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def combine(self, raw_data_list):
-        raise NotImplemented
+        raise NotImplementedError
 
     def __init__(self, folder, n=0, data_folder='data'):
         self.offsets = range(-n, n+1) if isinstance(n,int) else n
