@@ -58,6 +58,17 @@ class CombinedParticleData:
 
         return self.cache[step]
 
+    def __iter__(self):
+        self.curstep = 0
+        return self
+
+    def __next__(self):
+        try:
+            return self[self.curstep]
+        except IndexError:
+            raise StopIteration
+        self.curstep += 1
+
     def _build_indexes(self):
         self.indexes = []
         for f in self.files:
