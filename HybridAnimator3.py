@@ -45,14 +45,14 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
     ax.set_ylabel(d[1])
     #ax.set_ylim([-50,50])
     
-    if args.vmin is not None:
-        vmin = args.vmin
-    else:
-        vmin = min((np.min(d[d!=0]) for d in all_data))
     if args.vmax is not None:
         vmax = args.vmax
     else:
         vmax = max((np.max(d) for d in all_data))
+    if args.vmin is not None:
+        vmin = args.vmin
+    else:
+        vmin = min((np.min(d[d!=0], initial=vmax/2) for d in all_data))
     # Make the inital plot
     artist = direct_plot(fig, ax, all_data[0], h.para, d, cmap=args.colormap, norm=args.norm, vmin=vmin, vmax=vmax, mccomas=args.mccomas)[0]
     annotation = ax.annotate(str(1),
