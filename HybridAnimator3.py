@@ -29,7 +29,6 @@ h = hr(args.prefix,args.variable.name)
 # Preload all the slices
 print("Loading data into memory")
 all_data = []
-#for m, step_data in monotonic_step_iter(h):
 for m, step_data in equal_spacing_step_iter(h):
     if not h.isScalar:
         step_data = step_data[:,:,:,args.variable.coordinate]
