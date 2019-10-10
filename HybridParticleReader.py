@@ -116,7 +116,8 @@ class beta(CombinedParticleData):
         return ret
 
 class SimpleParticleData(CombinedParticleData):
-    combine = np.concatenate
+    def combine(self, raw_data):
+        return np.concatenate(raw_data)
 
 class mrat(SimpleParticleData):
     varname = 'mrat'
