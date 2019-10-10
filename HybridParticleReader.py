@@ -39,7 +39,7 @@ class CombinedParticleData:
 
         self._build_indexes()
 
-        self.numsteps = len(self.indexes[0])
+        self.numsteps = len(self.indexes[0][1::2])
 
         self.cache = {}
 
@@ -52,7 +52,8 @@ class CombinedParticleData:
 
         if step not in self.cache:
             for index,f in zip(self.indexes, self.files):
-                f.seek( index[step] )
+                # Seek to the particle data (skipping step numbers)
+                f.seek( index[step][1::2] )
             self.cache[step] = self.combine( [ f.readReals().astype(np.float64) for f in self.files ] )
 
         return self.cache[step]
@@ -60,9 +61,7 @@ class CombinedParticleData:
     def _build_indexes(self):
         self.indexes = []
         for f in self.files:
-            # Skip the step number records and only record the seek positions
-            # for the actual particle data
-            self.indexes.append( f.index()[1::2] )
+            self.indexes.append(f.index())
 
 class xp(CombinedParticleData):
     varname = 'xp'
