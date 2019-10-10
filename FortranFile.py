@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Modified 2016-2017 by Nathan Barnes, University of Alaska Fairbanks
+# Modified 2016-2019 by Nathan Barnes, University of Alaska Fairbanks
 
 """Defines a file-derived class to read/write Fortran unformatted files.
 
