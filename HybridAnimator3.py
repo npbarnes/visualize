@@ -53,11 +53,11 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
     else:
         vmin = min((np.min(d[d!=0], initial=vmax/2) for d in all_data))
     # Make the inital plot
-    artist = direct_plot(fig, ax, all_data[0], h.para, d, cmap=args.colormap, norm=args.norm, vmin=vmin, vmax=vmax, mccomas=args.mccomas)[0]
-    annotation = ax.annotate(str(1),
+    artist = direct_plot(fig, ax, all_data[0], h.para, d, cmap=args.colormap, norm=args.norm, vmin=vmin, vmax=vmax, mccomas=args.mccomas, skip_labeling=True)[0]
+    annotation = ax.annotate("...Placeholder String...",
             xy=(0.975, 0.975), xycoords='figure fraction',
             horizontalalignment='right', verticalalignment='top',
-            fontsize=8)
+            fontsize=8, fontname='monospace')
     
     def update_animation(frame):
         s = data_slice(h.para, all_data[frame], d)
@@ -67,7 +67,7 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
         s = s[:-1, :-1]
 
         artist.set_array(s.T.ravel())
-        annotation.set_text(str(frame))
+        annotation.set_text(r"Simulated time $\approx$ {:>4.1f} s".format((1 + frame*h.para['nout'])*h.para['dt']))
         return artist,
     
     ani = animation.FuncAnimation(fig, frames=n_frames,
