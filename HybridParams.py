@@ -264,10 +264,7 @@ class HybridParams:
         # Get grid points in pluto centered coords
         def pluto_position(p):
             """get the position of pluto in simulation coordinates"""
-            try:
-                return p['qx'][int(p['nx']/2) + p['pluto_offset']]
-            except IndexError:
-                return 0.0
+            return p['qx'][p['nx']//2 + p['pluto_offset']]
 
         qx = allParams['qx'] - pluto_position(allParams)
         qy = allParams['qy'] - np.max(allParams['qy'])/2

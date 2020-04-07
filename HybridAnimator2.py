@@ -8,6 +8,13 @@ from matplotlib.colors import Normalize, LogNorm, SymLogNorm
 import matplotlib.animation as animation
 from HybridHelper import parser, parse_cmd_line, get_next_slice, get_next_beta_slice, init_figures, direct_plot, beta_plot
 
+import logging
+logger = logging.getLogger('matplotlib')
+logger.setLevel(logging.INFO)
+
+#matplotlib.verbose.set_level('helpful')
+#plt.rcParams['animation.convert_path'] = '/usr/local/pkg/vis/ImageMagick/7.0.8-11-pic-intel-2016b/bin/convert'
+
 # Tools for later
 class StoppableFrames:
     """If something external sets the done_playing atribute to True, then it will raise a StopIteration on the next call to next"""
@@ -28,7 +35,7 @@ parser.add_argument('--framerate', type=int, default=20)
 args = parse_cmd_line()
 fig1, fig2, ax1, ax2 = init_figures(args)
 if args.separate:
-    raise NotImplemented("Separate figures are not implemented for animations")
+    raise NotImplementedError("Separate figures are not implemented for animations")
 
 # Set title, labels and limits
 if args.fontsize is not None:
@@ -130,6 +137,11 @@ else:
 if args.save:
     ani = animation.FuncAnimation(fig1, frames=StoppableFrames(),
                     func=update_animation, interval=1, blit=True, repeat=False)
-    ani.save(args.save + '.mp4', fps=args.framerate, bitrate=5000, writer='ffmpeg')
+    plt.show()
+    #ani.save(args.save + '.mp4', fps=args.framerate, bitrate=5000, writer='ffmpeg')
+    print(args.save)
+    ani.save(args.save + '.gif', writer='imagemagick')
+    #writer = animation.ImageMagickFileWriter(fps=args.framerate, bitrate=5000)
+    ani.save(args.save + '.gif', writer=writer)
 else:
     raise RuntimeError("You must save the animation with the --save flag and view separately. Directly viewing is not supported.")

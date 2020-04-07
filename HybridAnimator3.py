@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import numpy as np
-from HybridReader2 import HybridReader2 as hr, monotonic_step_iter, equal_spacing_step_iter
+from HybridReader2 import HybridReader2 as hr, step_iter, monotonic_step_iter, equal_spacing_step_iter
 from FortranFile import NoMoreRecords
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -30,9 +30,10 @@ def make_figures(args):
 h = hr(args.prefix,args.variable.name)
 
 # Preload all the slices
-print("Loading data into memory")
+print(f"Loading {args.variable.name} data into memory")
 all_data = []
-for m, step_data in equal_spacing_step_iter(h):
+all_steps = []
+for m, step_data in step_iter(h):
     if not h.isScalar:
         step_data = step_data[:,:,:,args.variable.coordinate]
     if args.variable.name == 'bt':
@@ -42,7 +43,13 @@ for m, step_data in equal_spacing_step_iter(h):
     elif args.variable.name.startswith('up'):
         step_data *= 1e3 # km -> m
     all_data.append(step_data)
-n_frames = len(all_data)
+    all_steps.append(m)
+
+dms = [mm - m for mm,m in zip(all_steps[1:], all_steps[:-1])]
+n_frames = len(all_steps)
+#n_frames = []
+#for i, dm in enumerate(dms):
+    #n_frames.extend([i] * dm)
 
 # Make the animations
 for (fig, ax), d in zip(make_figures(args), args.directions):
@@ -75,6 +82,10 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
     dots, = ax.plot([qx[cx-2],qx[cx-1],qx[cx],qx[cx+1],qx[cx+2]], 5*[qz[cz+5]], color='black', marker='o', markersize=0.7, linestyle='None')
     
     def update_animation(frame):
+        if frame == update_animation.prev_frame:
+            update_animation.prev_frame = frame
+            return ()
+        prev_frame = frame
         s = data_slice(h.para, all_data[frame], d)
 
         # When changing the data for pcolormesh we need to remove the last element
@@ -82,8 +93,9 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
         s = s[:-1, :-1]
 
         artist.set_array(s.T.ravel())
-        annotation.set_text(r"Time since release $\approx$ {:>4.1f} s".format((1 + frame*h.para['nout'])*h.para['dt']))
-        return artist, dots
+        annotation.set_text(r"Simulated time $\approx$ {:>4.1f} s".format(all_steps[frame]*h.para['dt']))
+        return artist,
+    update_animation.prev_frame = -1
     
     ani = animation.FuncAnimation(fig, frames=n_frames,
         func=update_animation, interval=100, blit=True)

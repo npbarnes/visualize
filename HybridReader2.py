@@ -77,9 +77,9 @@ class HybridReader2:
     def sort_filenames(self):
         names = self.filenames()
         names.sort(key=self._get_number,reverse=True)
-#        if self.var == 'np_He_shell':
-#            print "Warning: Number 176 has been replaced"
-#            names[-176] += '.replacement'
+        if self.var == 'np_He_shell':
+            print("Warning: Number 176 has been replaced")
+            names[-176] += '.replacement'
 
         return names
 
@@ -112,7 +112,7 @@ class HybridReader2:
         mrecords = np.array([h.readInts() for h in self.handles])
         assert mrecords.shape == (len(self.handles),1)
         #assert np.all(mrecords == mrecords[0])
-        m = mrecords[0]
+        m = mrecords[0][0]
 
         if self.isScalar:
             # (xyz)
@@ -242,6 +242,13 @@ class HybridReader2:
         for h in self.handles:
             h.close()
 
+def step_iter(h):
+    while True:
+        try:
+            m, data = h.get_next_timestep()
+        except ff.NoMoreRecords:
+            return
+        yield m, data
 
 def monotonic_step_iter(h):
     # Read the first timestep (number and data)
@@ -276,8 +283,8 @@ def equal_spacing_step_iter(h):
     prev_m = m1
     for m,data in iterator:
         if m-prev_m == dm:
-            prev_m = m
             yield m, data
+        prev_m = m
 
 
 if __name__ == "__main__":
