@@ -53,7 +53,7 @@ class CombinedParticleData:
         if step not in self.cache:
             for index,f in zip(self.indexes, self.files):
                 # Seek to the particle data (skipping step numbers)
-                f.seek( index[step][1::2] )
+                f.seek( index[1::2][step] )
             self.cache[step] = self.combine( [ f.readReals().astype(np.float64) for f in self.files ] )
 
         return self.cache[step]

@@ -4,11 +4,14 @@ from HybridReader2 import HybridReader2 as hr, monotonic_step_iter, equal_spacin
 from FortranFile import NoMoreRecords
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import HybridHelper
 from HybridHelper import parser, parse_cmd_line, data_slice, direct_plot
 
 # Animation specific arguments
 parser.add_argument('--framerate', type=int, default=20)
+parser.add_argument('--xy-scale', type=float, default=HybridHelper.Rp)
 args = parse_cmd_line()
+HybridHelper.Rp = args.xy_scale
 
 if args.single_fig:
     print("Combined plots no longer supported")
@@ -32,16 +35,20 @@ all_data = []
 for m, step_data in equal_spacing_step_iter(h):
     if not h.isScalar:
         step_data = step_data[:,:,:,args.variable.coordinate]
-        if args.variable.name == 'bt':
-            step_data = h.para['ion_amu'] * 1.6726219e-27/1.60217662e-19 * step_data # ion gyrofrequency -> nT
+    if args.variable.name == 'bt':
+        step_data = 1e9 * h.para['ion_amu'] * 1.6726219e-27/1.60217662e-19 * step_data # ion gyrofrequency -> nT
+    elif args.variable.name.startswith('np'):
+        step_data *= (1e-3)**3 # km^-3 -> m^-3
+    elif args.variable.name.startswith('up'):
+        step_data *= 1e3 # km -> m
     all_data.append(step_data)
 n_frames = len(all_data)
 
 # Make the animations
 for (fig, ax), d in zip(make_figures(args), args.directions):
     print('Animating {} plot'.format(d))
-    ax.set_xlabel(d[0])
-    ax.set_ylabel(d[1])
+    ax.set_xlabel('X (km)')
+    ax.set_ylabel('Y (km)')
     #ax.set_ylim([-50,50])
     
     if args.vmax is not None:
@@ -58,6 +65,14 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
             xy=(0.975, 0.975), xycoords='figure fraction',
             horizontalalignment='right', verticalalignment='top',
             fontsize=8, fontname='monospace')
+
+    ax.set_xlim([-20,20])
+    ax.set_ylim([-20,20])
+
+    qx,qy,qz = h.para['grid_points']
+    cx = int(len(qx)/2)
+    cz = int(len(qz)/2)
+    dots, = ax.plot([qx[cx-2],qx[cx-1],qx[cx],qx[cx+1],qx[cx+2]], 5*[qz[cz+5]], color='black', marker='o', markersize=0.7, linestyle='None')
     
     def update_animation(frame):
         s = data_slice(h.para, all_data[frame], d)
@@ -67,8 +82,8 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
         s = s[:-1, :-1]
 
         artist.set_array(s.T.ravel())
-        annotation.set_text(r"Simulated time $\approx$ {:>4.1f} s".format((1 + frame*h.para['nout'])*h.para['dt']))
-        return artist,
+        annotation.set_text(r"Time since release $\approx$ {:>4.1f} s".format((1 + frame*h.para['nout'])*h.para['dt']))
+        return artist, dots
     
     ani = animation.FuncAnimation(fig, frames=n_frames,
         func=update_animation, interval=100, blit=True)

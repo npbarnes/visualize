@@ -265,7 +265,7 @@ class HybridParams:
         def pluto_position(p):
             """get the position of pluto in simulation coordinates"""
             try:
-                return p['qx'][p['nx']/2 + p['pluto_offset']]
+                return p['qx'][int(p['nx']/2) + p['pluto_offset']]
             except IndexError:
                 return 0.0
 

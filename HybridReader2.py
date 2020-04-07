@@ -36,7 +36,7 @@ class HybridReader2:
         self.paths = [join(self.hp.grid, f) for f in self.sort_filenames()]
         self.handles = [ff.FortranFile(p, mode=mode) for p in self.paths]
         if len(self.paths) == 0:
-            raise NoSuchVariable()
+            raise NoSuchVariable(str(variable))
         self.isScalar = self._check_scalar()
 
     def restart(self):
