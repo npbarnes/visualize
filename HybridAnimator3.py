@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/home/nathan/anaconda2/envs/jupyterlab/bin/python
 import numpy as np
 from HybridReader2 import HybridReader2 as hr, monotonic_step_iter, equal_spacing_step_iter
 from FortranFile import NoMoreRecords
