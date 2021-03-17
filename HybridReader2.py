@@ -111,7 +111,7 @@ class HybridReader2:
         # read the time step record
         mrecords = np.array([h.readInts() for h in self.handles])
         assert mrecords.shape == (len(self.handles),1)
-        #assert np.all(mrecords == mrecords[0])
+        assert np.all(mrecords == mrecords[0])
         m = mrecords[0]
 
         if self.isScalar:
