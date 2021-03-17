@@ -83,8 +83,8 @@ class xp(CombinedParticleData):
         lst = []
         for cur_proc, d in zip(self.procs, raw_data):
             dd = d.reshape((-1,3), order='F')
-            #from_bottom = self.para['num_proc'] - cur_proc
-            from_bottom = cur_proc - 1
+            from_bottom = self.para['num_proc'] - cur_proc
+            #from_bottom = cur_proc - 1
 
             dd[:,0] -= pp
             dd[:,1] -= np.max(self.para['qy'])/2
