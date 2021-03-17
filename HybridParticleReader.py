@@ -150,6 +150,17 @@ class HybridParticleReader:
         self.mrat = mrat(folder, n, data_folder)
         self.tags = tags(folder, n, data_folder)
 
+class AStep(Particles):
+    def __init__(self, folder, n=0, data_folder='data', step=-1):
+        hpr = HybridParticleReader(folder, n, data_folder=data_folder)
+
+        self.para = hpr.x.para
+        self.x = hpr.x[step]
+        self.v = hpr.v[step]
+        self.mrat = hpr.mrat[step]
+        self.beta = hpr.beta[step]
+        self.tags = hpr.tags[step]
+
 class LastStep(Particles):
     def __init__(self, folder, n=0, data_folder='data'):
         hpr = HybridParticleReader(folder, n, data_folder=data_folder)
