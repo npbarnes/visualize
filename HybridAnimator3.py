@@ -22,7 +22,7 @@ def make_figures(args):
     ret = []
     for _ in args.directions:
         ret.append(
-            plt.subplots(subplot_kw={'aspect':'equal'})
+            plt.subplots(figsize=[5.4,4.2], subplot_kw={'aspect':'equal'})
         )
     return ret
         
@@ -54,9 +54,9 @@ n_frames = len(all_steps)
 # Make the animations
 for (fig, ax), d in zip(make_figures(args), args.directions):
     print('Animating {} plot'.format(d))
-    ax.set_xlabel('X (km)')
-    ax.set_ylabel('Y (km)')
-    #ax.set_ylim([-50,50])
+    ax.set_xlabel(f'{d[0].upper()} (km)', fontsize=20)
+    ax.set_ylabel(f'{d[1].upper()} (km)', fontsize=20)
+    ax.tick_params(labelsize=20)
     
     if args.vmax is not None:
         vmax = args.vmax
@@ -69,12 +69,13 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
     # Make the inital plot
     artist = direct_plot(fig, ax, all_data[0], h.para, d, cmap=args.colormap, norm=args.norm, vmin=vmin, vmax=vmax, mccomas=args.mccomas, skip_labeling=True)[0]
     annotation = ax.annotate("...Placeholder String...",
-            xy=(0.975, 0.975), xycoords='figure fraction',
-            horizontalalignment='right', verticalalignment='top',
-            fontsize=8, fontname='monospace')
+            xy=(0.35, 0.975), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=20)
 
-    ax.set_xlim([-20,20])
-    ax.set_ylim([-20,20])
+    ax.set_xlim(args.xlim)
+    ax.set_ylim(args.ylim)
+    fig.subplots_adjust(bottom=0.16, top=0.86, left=0.2, right=0.9)
 
     qx,qy,qz = h.para['grid_points']
     cx = int(len(qx)/2)
@@ -93,7 +94,7 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
         s = s[:-1, :-1]
 
         artist.set_array(s.T.ravel())
-        annotation.set_text(r"Simulated time $\approx$ {:>4.1f} s".format(all_steps[frame]*h.para['dt']))
+        annotation.set_text(r"t = {:>4.1f} s".format(all_steps[frame]*h.para['dt']))
         return artist,
     update_animation.prev_frame = -1
     
