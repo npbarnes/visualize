@@ -239,8 +239,11 @@ class HybridReader2:
         
 
     def __del__(self):
-        for h in self.handles:
-            h.close()
+        try:
+            for h in self.handles:
+                h.close()
+        except AttributeError:
+            pass
 
 def step_iter(h):
     while True:

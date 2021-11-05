@@ -135,7 +135,7 @@ class FortranFile(io.FileIO):
     def _read_leading_indicator(self):
         indicator_str = self.read(self._header_length)
         if len(indicator_str) == 0:
-            raise NoMoreRecords
+            raise NoMoreRecords(f"Tried to read a record past the end of the file ({self.name}).")
         if len(indicator_str) < self._header_length:
             raise IntegrityError('Could not read the leading size indicator. Not enough bytes.')
         indicator = numpy.fromstring(indicator_str,
@@ -178,7 +178,7 @@ class FortranFile(io.FileIO):
     def readBackRecord(self):
         """Read the fortran record just before the current file position"""
         if self.tell() == 0:
-            raise NoMoreRecords
+            raise NoMoreRecords(f"Tried to read a record before the beginning of the file ({self.name}).")
         if self.tell() < 2*self._header_length:
             raise IntegrityError('Not enough space for any record before this position.')
         self.seek(-self._header_length,os.SEEK_CUR)
@@ -214,7 +214,7 @@ class FortranFile(io.FileIO):
 
     def skipBackRecord(self):
         if self.tell() == 0:
-            raise NoMoreRecords
+            raise NoMoreRecords(f"Tried to skip a record before the start of the file ({self.name}).")
         if self.tell() < 2*self._header_length:
             raise IntegrityError('Not enough space for any record before this position.')
         self.seek(-self._header_length,os.SEEK_CUR)
