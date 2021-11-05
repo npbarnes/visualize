@@ -77,9 +77,6 @@ class HybridReader2:
     def sort_filenames(self):
         names = self.filenames()
         names.sort(key=self._get_number,reverse=True)
-        if self.var == 'np_He_shell':
-            print("Warning: Number 176 has been replaced")
-            names[-176] += '.replacement'
 
         return names
 
