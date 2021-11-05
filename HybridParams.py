@@ -151,9 +151,10 @@ class HybridParams:
         assert len(record)==1
         para.update({'vth':record[0]})
 
-        record = f.readReals()
-        assert len(record)==1
-        para.update({'Ni_tot_frac':record[0]})
+        if self.version < 5:
+            record = f.readReals()
+            assert len(record)==1
+            para.update({'Ni_tot_frac':record[0]})
 
         record = f.readReals()
         assert len(record)==1
