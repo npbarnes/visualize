@@ -83,8 +83,8 @@ class xp(CombinedParticleData):
         lst = []
         for cur_proc, d in zip(self.procs, raw_data):
             dd = d.reshape((-1,3), order='F')
-            #from_bottom = self.para['num_proc'] - cur_proc
-            from_bottom = cur_proc - 1
+            from_bottom = self.para['num_proc'] - cur_proc
+            #from_bottom = cur_proc - 1
 
             dd[:,0] -= pp
             dd[:,1] -= np.max(self.para['qy'])/2
@@ -149,6 +149,17 @@ class HybridParticleReader:
         self.beta_p = beta_p(folder, n, data_folder)
         self.mrat = mrat(folder, n, data_folder)
         self.tags = tags(folder, n, data_folder)
+
+class AStep(Particles):
+    def __init__(self, folder, n=0, data_folder='data', step=-1):
+        hpr = HybridParticleReader(folder, n, data_folder=data_folder)
+
+        self.para = hpr.x.para
+        self.x = hpr.x[step]
+        self.v = hpr.v[step]
+        self.mrat = hpr.mrat[step]
+        self.beta = hpr.beta[step]
+        self.tags = hpr.tags[step]
 
 class LastStep(Particles):
     def __init__(self, folder, n=0, data_folder='data'):
