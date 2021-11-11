@@ -9,7 +9,6 @@ from operator import itemgetter
 from functools import partial
 from HybridParams import HybridParams
 
-
 class HybridError(ValueError):
     pass
 
@@ -200,19 +199,14 @@ class HybridReader2:
         nx = self.para['nx']
         ny = self.para['ny']
         zrange = self.para['zrange']
-        if self.isScalar:
-            ret = np.empty((len(steps), nx, ny, zrange), dtype=np.float32)
-        else:
-            ret = np.empty((len(steps), nx, ny, zrange, 3), dtype=np.float32)
+
+        ret_lst = []
 
         for n in range(len(steps)):
             m, data = self.get_next_timestep()
+            ret_lst.append(data)
 
-            if self.isScalar:
-                ret[n,:,:,:] = data
-            else:
-                ret[n,:,:,:,:] = data
-
+        ret = np.stack(ret_lst, axis=0)
         for h in self.handles:
             h.close()
         return steps, np.array([self.para['dt']*m for m in steps]), ret
