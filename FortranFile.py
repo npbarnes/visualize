@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Modified 2016-2019 by Nathan Barnes, University of Alaska Fairbanks
+# Modified 2016-2021 by Nathan Barnes, University of Alaska Fairbanks
 
 """Defines a file-derived class to read/write Fortran unformatted files.
 
@@ -31,7 +31,7 @@ same integer as before.
 Examples
 --------
 
-To use the default endian and precision settings, one can just do::
+To use the default precision settings, one can just do::
     >>> f = FortranFile('filename')
     >>> x = f.readReals()
 
@@ -42,9 +42,9 @@ One can read arrays with varying precisions::
     >>> z = f.readReals('f')
 Where the format codes are those used by Python's struct module.
 
-One can change the default endian-ness and header precision::
-    >>> f = FortranFile('filename', endian='>', header_prec='l')
-for a file with little-endian data whose record headers are long
+One can change the default header precision::
+    >>> f = FortranFile('filename', header_prec='l')
+for a file whose record headers are long
 integers.
 """
 
@@ -68,27 +68,6 @@ class FortranFile(io.FileIO):
         return numpy.dtype(self._header_prec).itemsize
     _header_length = property(fget=_get_header_length)
 
-    def _set_endian(self,c):
-        """Set endian to big (c='>') or little (c='<') or native (c='=')
-
-        :Parameters:
-          `c` : string
-            The endian-ness to use when reading from this file.
-        """
-        if c in '<>@=':
-            if c == '@':
-                c = '='
-            self._endian = c
-        else:
-            raise ValueError('Cannot set endian-ness')
-
-    def _get_endian(self):
-        return self._endian
-    ENDIAN = property(fset=_set_endian,
-                      fget=_get_endian,
-                      doc="Possible endian values are '<', '>', '@', '='"
-                     )
-
     def _set_header_prec(self, prec):
         if prec in 'hilq':
             self._header_prec = prec
@@ -102,16 +81,11 @@ class FortranFile(io.FileIO):
                            doc="Possible header precisions are 'h', 'i', 'l', 'q'"
                           )
 
-    def __init__(self, fname, endian='@', header_prec='i', *args, **kwargs):
+    def __init__(self, fname, header_prec='i', *args, **kwargs):
         """Open a Fortran unformatted file for writing.
 
         Parameters
         ----------
-        endian : character, optional
-            Specify the endian-ness of the file.  Possible values are
-            '>', '<', '@' and '='.  See the documentation of Python's
-            struct module for their meanings.  The deafult is '>' (native
-            byte order)
         header_prec : character, optional
             Specify the precision used for the record headers.  Possible
             values are 'h', 'i', 'l' and 'q' with their meanings from
@@ -120,7 +94,6 @@ class FortranFile(io.FileIO):
 
         """
         super(FortranFile, self).__init__(fname,  *args, **kwargs)
-        self.ENDIAN = endian
         self.HEADER_PREC = header_prec
 
     def _read_data(self, num_bytes):
@@ -139,7 +112,7 @@ class FortranFile(io.FileIO):
         if len(indicator_str) < self._header_length:
             raise IntegrityError('Could not read the leading size indicator. Not enough bytes.')
         indicator = numpy.fromstring(indicator_str,
-                                dtype=self.ENDIAN+self.HEADER_PREC
+                                dtype=self.HEADER_PREC
                                )[0]
         if indicator < 0:
             raise IntegrityError('Invalid leading size indicator. Sizes must be non-negative.')
@@ -151,7 +124,7 @@ class FortranFile(io.FileIO):
         if len(indicator_str) < self._header_length:
             raise IntegrityError('Could not read the trailing size indicator. Not enough bytes.')
         indicator = numpy.fromstring(indicator_str,
-                                dtype=self.ENDIAN+self.HEADER_PREC
+                                dtype=self.HEADER_PREC
                                )[0]
 
         if indicator < 0:
@@ -162,7 +135,7 @@ class FortranFile(io.FileIO):
     def _write_check(self, number_of_bytes):
         """Write the header for the given number of bytes"""
         self.write(numpy.array(number_of_bytes,
-                               dtype=self.ENDIAN+self.HEADER_PREC,).tostring()
+                               dtype=self.HEADER_PREC,).tostring()
                   )
 
     def readRecord(self):
@@ -274,7 +247,7 @@ class FortranFile(io.FileIO):
             raise ValueError('Not an appropriate precision')
 
         data_str = self.readRecord()
-        return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
+        return numpy.fromstring(data_str, dtype=prec)
 
     def readBackReals(self, prec='f'):
         """Read in an array of real numbers from before the current file position.
@@ -310,7 +283,7 @@ class FortranFile(io.FileIO):
         if prec not in self._real_precisions:
             raise ValueError('Not an appropriate precision')
 
-        nums = numpy.array(reals, dtype=self.ENDIAN+prec)
+        nums = numpy.array(reals, dtype=prec)
         self.writeRecord(nums.tostring())
 
     _int_precisions = 'hilq'
@@ -330,7 +303,7 @@ class FortranFile(io.FileIO):
             raise ValueError('Not an appropriate precision')
 
         data_str = self.readRecord()
-        return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
+        return numpy.fromstring(data_str, dtype=prec)
 
     def readBackInts(self, prec='i'):
         """Read an array of integers.
@@ -347,7 +320,7 @@ class FortranFile(io.FileIO):
             raise ValueError('Not an appropriate precision')
 
         data_str = self.readBackRecord()
-        return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
+        return numpy.fromstring(data_str, dtype=prec)
 
     def writeInts(self, ints, prec='i'):
         """Write an array of integers in given precision
@@ -362,7 +335,7 @@ class FortranFile(io.FileIO):
         if prec not in self._int_precisions:
             raise ValueError('Not an appropriate precision')
 
-        nums = numpy.array(ints, dtype=self.ENDIAN+prec)
+        nums = numpy.array(ints, dtype=prec)
         self.writeRecord(nums.tostring())
 
     def readOther(self, dtype):
@@ -421,5 +394,5 @@ class FortranFile(io.FileIO):
             if dtype_prec is None:
                 yield r
             else:
-                yield numpy.fromstring(r, dtype=self.ENDIAN+dtype_prec)
+                yield numpy.fromstring(r, dtype=dtype_prec)
 
