@@ -135,6 +135,7 @@ class HybridReader2:
             for n in range(-n):
                 self.skip_back_timestep()
         else:
+            # should we seek(0) first?
             for n in range(n-1):
                 self.skip_next_timestep()
 
@@ -197,7 +198,7 @@ class HybridReader2:
             # then there is a hanging record number without any data
             # so we remove it.
             if len(h.index())%2 == 0:
-                h.skipBackRecord()
+                h.skipBackRecord() # is this right?
                 h.truncate()
             # Finally, make sure we leave it at the begining
             h.seek(0, SEEK_SET)
