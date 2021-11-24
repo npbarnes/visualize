@@ -3,11 +3,40 @@ import FortranFile as ff
 import numpy as np
 from os import SEEK_SET,SEEK_CUR,SEEK_END
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, getsize
 import re
 from operator import itemgetter
 from functools import partial
 from HybridParams import HybridParams
+
+def _find_nonempty(paths):
+    for p in paths:
+        if getsize(p) != 0:
+            return p
+    return None
+
+class FakeFortranFile:
+    def __init__(self, nx, ny, nz, dtype, isScalar):
+        if isScalar:
+            self.arr = np.zeros(nx*ny*nz, dtype=dtype)
+        else:
+            self.arr = np.zeros(nx*ny*nz*3, dtype=dtype)
+
+    def skipRecord(self):
+        pass
+    def skipBackRecord(self):
+        pass
+    def readInts(self):
+        return None
+    def readReals(self, p=None):
+        return self.arr
+    def readBackInts(self):
+        return self.readInts()
+    def readBackReals(self, p=None):
+        return self.readReals()
+
+    def seek(self, n, m=None):
+        pass
 
 class HybridError(ValueError):
     pass
@@ -16,7 +45,7 @@ class NoSuchVariable(HybridError):
     pass
 
 class HybridReader2:
-    def __init__(self, prefix, variable, mode='r', double=False, force_version=None):
+    def __init__(self, prefix, variable, mode='r', double=False, force_version=None, empty_is_zero=True):
         self.doublereals = double
         self.mode = mode
 
@@ -33,13 +62,25 @@ class HybridReader2:
         self.rx = re.compile(self.filename_format_string)
 
         self.paths = [join(self.hp.grid, f) for f in self.sort_filenames()]
-        self.handles = [ff.FortranFile(p, mode=mode) for p in self.paths]
         if len(self.paths) == 0:
             raise NoSuchVariable(str(variable))
+
+        self.representative_path = _find_nonempty(self.paths)
+        if self.representative_path is None:
+            raise HybridError("All files appear to be empty")
+        self.representative = ff.FortranFile(self.representative_path, mode=mode)
         self.isScalar = self._check_scalar()
 
+        self.handles = [] #[ff.FortranFile(p, mode=mode) for p in self.paths]
+        for p in self.paths:
+            if getsize(p) == 0:
+                self.handles.append(FakeFortranFile(self.para['nx'], self.para['ny'], self.para['nz'], self.real_prec, self.isScalar))
+            else:
+                self.handles.append(ff.FortranFile(p, mode=mode))
+        self.real_handles = [h for h in self.handles if isinstance(h, ff.FortranFile)]
+
     def restart(self):
-        for h in self.handles:
+        for h in self.real_handles:
             h.seek(0)
 
     ######################################################################################
@@ -49,7 +90,7 @@ class HybridReader2:
             realsize = 8
         else:
             realsize = 4
-        h = self.handles[0]
+        h = self.representative
         s = h.tell()
         # skip timestep number
         h.skipRecord()
@@ -88,7 +129,7 @@ class HybridReader2:
 
     def get_saved_timesteps(self):
         """returns a list of the time step numbers the simulation saved"""
-        f = self.handles[0]
+        f = self.representative
         start = f.tell()
         f.seek(0)
         ms = []
@@ -105,8 +146,8 @@ class HybridReader2:
     def get_next_timestep(self):
         """Returns the next timestep number and data leaving the file position after that data"""
         # read the time step record
-        mrecords = np.array([h.readInts() for h in self.handles])
-        assert mrecords.shape == (len(self.handles),1)
+        mrecords = np.array([h.readInts() for h in self.real_handles])
+        assert mrecords.shape == (len(self.real_handles),1)
         assert np.all(mrecords == mrecords[0])
         m = mrecords[0]
 
@@ -130,7 +171,7 @@ class HybridReader2:
 
     def get_timestep(self, n):
         if n < 0:
-            for h in self.handles:
+            for h in self.real_handles:
                 h.seek(0, SEEK_END)
             for n in range(-n):
                 self.skip_back_timestep()
@@ -142,12 +183,12 @@ class HybridReader2:
         return self.get_next_timestep()
 
     def skip_next_timestep(self):
-        for h in self.handles:
+        for h in self.real_handles:
             h.skipRecord()
             h.skipRecord()
 
     def skip_back_timestep(self):
-        for h in self.handles:
+        for h in self.real_handles:
             h.skipBackRecord()
             h.skipBackRecord()
 
@@ -161,10 +202,10 @@ class HybridReader2:
 
     def get_last_timestep(self):
         """Returns time step number, time, and data for the last saved step of the simulation"""
-        for h in self.handles:
+        for h in self.real_handles:
             h.seek(0, SEEK_END)
         m, data = self.get_prev_timestep()
-        for h in self.handles:
+        for h in self.real_handles:
             h.seek(0, SEEK_END)
         return m, self.para['dt']*m, data
 
@@ -185,7 +226,7 @@ class HybridReader2:
         return steps, np.array([self.para['dt']*m for m in steps]), ret
     
     def repair_and_reset(self):
-        for h in self.handles:
+        for h in self.real_handles:
             # Start at the begining
             h.seek(0, SEEK_SET)
             # Repair
@@ -204,7 +245,7 @@ class HybridReader2:
 
     def __del__(self):
         try:
-            for h in self.handles:
+            for h in self.real_handles:
                 h.close()
         except AttributeError:
             pass
