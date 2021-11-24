@@ -182,8 +182,6 @@ class HybridReader2:
             ret_lst.append(data)
 
         ret = np.stack(ret_lst, axis=0)
-        for h in self.handles:
-            h.close()
         return steps, np.array([self.para['dt']*m for m in steps]), ret
     
     def repair_and_reset(self):
