@@ -128,32 +128,6 @@ class HybridReader2:
 
         return m, data
 
-    def get_bizaro_next_timestep(self):
-        """Returns the next timestep number and data leaving the file position after that data"""
-        # read the time step record
-        mrecords = np.array((h.readInts() for h in self.handles))
-        assert mrecords.shape == (len(self.handles),1)
-        assert np.all(mrecords == mrecords[0])
-        m = mrecords[0]
-
-        if self.isScalar:
-            # (xyz)
-            flat_data = np.concatenate((h.readReals(self.real_prec) for h in self.handles))
-            # (x,y,z)
-            data = np.reshape(flat_data,[self.para['nx'],self.para['ny'],self.para['zrange']+2*self.para['num_proc']],'F')
-        else:
-            # convert flattened data into 3d array of vectors
-            datalst = [h.readReals(self.real_prec) for h in self.handles]
-            # shapes data from (p,xyzc) to (p,x,y,z,c)
-            redatalst = np.reshape(datalst,[len(self.handles),self.para['nx'],self.para['ny'],self.para['nz'],3], 'F')
-            cutOverlap = redatalst[:,:,:,:-2,:]
-            # (p,x,y,z,c) -> (x,y,p,z,c)
-            rolledlst = np.rollaxis(cutOverlap,0,3)
-            # (p,t,x,y,zrange,c)
-            data = np.reshape(rolledlst,[self.para['nx'],self.para['ny'],self.para['zrange'],3])
-
-        return m, data
-
     def get_timestep(self, n):
         if n < 0:
             for h in self.handles:
@@ -280,20 +254,3 @@ def equal_spacing_step_iter(h):
             yield m, data
         prev_m = m
 
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize
-    import colormaps as cmaps
-    from sys import argv
-
-    plt.register_cmap(name='viridis', cmap=cmaps.viridis)
-    plt.register_cmap(name='inferno', cmap=cmaps.inferno)
-    plt.register_cmap(name='plasma', cmap=cmaps.plasma)
-
-    h = HybridReader2(argv[1],argv[2])
-    im = plt.imshow(h.get_last_timestep()[-1][:,h.para['ny']/2,:].transpose(),origin='lower')
-    im.set_cmap(cmaps.viridis)
-    im.set_norm(Normalize(vmin=0,vmax=10*pow(10,13)))
-    plt.colorbar()
-    plt.show()
