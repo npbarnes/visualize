@@ -10,9 +10,7 @@ from collections import defaultdict
 
 # Animation specific arguments
 parser.add_argument('--framerate', type=int, default=20)
-parser.add_argument('--xy-scale', type=float, default=HybridHelper.Rp)
 args = parse_cmd_line()
-HybridHelper.Rp = args.xy_scale
 
 if args.single_fig:
     print("Combined plots no longer supported")
