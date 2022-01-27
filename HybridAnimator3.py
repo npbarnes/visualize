@@ -12,11 +12,6 @@ from collections import defaultdict
 parser.add_argument('--framerate', type=int, default=20)
 args = parse_cmd_line()
 
-if args.single_fig:
-    print("Combined plots no longer supported")
-    print("Use --separate-figures, --xy, --xz, or --yz")
-    exit(1)
-
 def make_figures(args):
     ret = []
     for _ in args.directions:
@@ -91,7 +86,7 @@ for (fig, ax), d in zip(make_figures(args), args.directions):
 
         # When changing the data for pcolormesh we need to remove the last element
         # in each direction for some reason.
-        s = s[:-1, :-1]
+        #s = s[:-1, :-1]
 
         artist.set_array(s.T.ravel())
         #annotation.set_text(r"t = {:>4.1f} s".format(all_steps[frame]*h.para['dt']))
