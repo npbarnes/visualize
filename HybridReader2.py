@@ -148,6 +148,7 @@ class HybridReader2:
         # read the time step record
         mrecords = np.array([h.readInts() for h in self.real_handles])
         assert mrecords.shape == (len(self.real_handles),1)
+        mrecords = mrecords.flatten()
         assert np.all(mrecords == mrecords[0])
         m = mrecords[0]
 
