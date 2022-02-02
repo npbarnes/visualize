@@ -171,8 +171,8 @@ def plot_each_variable(fig, axs, series):
     plt.setp(l.get_title(), multialignment='center')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--load', nargs='?', choices=('hybrid', 'npz'), default='npz')
-parser.add_argument('--path', nargs=1, default='timeseries.npz')
+parser.add_argument('--load', choices=('hybrid', 'npz'), default='npz')
+parser.add_argument('--path', default='timeseries.npz')
 parser.add_argument('--no-show', dest='show', action='store_false')
 
 if __name__ == "__main__":
@@ -198,5 +198,3 @@ if __name__ == "__main__":
         plot_each_variable(fig, axs, series)
         plt.show()
 
-
-    
