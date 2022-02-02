@@ -1,11 +1,14 @@
 #!/usr/bin/env python
+import os
 import sys
 import numpy as np
 from matplotlib import rc
 import matplotlib.pyplot as plt
 from HybridReader2 import HybridReader2 as hr
 from HybridReader2 import step_iter
+import argparse
 
+# Load data at a few gridpoints as a timeseries
 def getbobs(data):
     s = data.shape
     nx,ny,nz = s[0],s[1],s[2]
@@ -15,20 +18,22 @@ def getbobs(data):
     return data[(cx-2,cx-1,cx,cx+1,cx+2),cy,cz+5]
 
 def point_selection(data, mode):
+    b = getbobs(data)
+
     if mode is None:
-        return getbobs(data).copy()
+        return b.copy()
     elif mode == 'mag':
-        return np.linalg.norm(getbobs(data), axis=-1)
+        return np.linalg.norm(b, axis=-1)
     elif mode == 'x':
-        return getbobs(data)[:,0].copy()
+        return b[:,0].copy()
     elif mode == 'y':
-        return getbobs(data)[:,1].copy()
+        return b[:,1].copy()
     elif mode == 'z':
-        return getbobs(data)[:,2].copy()
+        return b[:,2].copy()
     else:
         raise ValueError("mode must be None, 'mag', 'x', 'y', or 'z'.")
 
-def timeseries_lowmemory(var, mode=None):
+def loadarray_fromhybrid(var, mode):
     h = hr('data', var)
     if h.isScalar:
         assert mode is None
@@ -41,14 +46,87 @@ def timeseries_lowmemory(var, mode=None):
         ret_lst.append(point_selection(data, mode))
     return ts, np.stack(ret_lst, axis=-1)
 
+def unique(ar):
+    """Similar to numpy.unique with return_index=True.
+    This function returns the unique values and last indices where a value occurs (rather than 
+    the first indices). There's no option to not return indices, just use np.unique in that case.
+    There's no option for inverse or counts, sorry.
+
+    Needed because whenever a restart happens in the simulation there are some timesteps that
+    get calculated and saved twice, but because of the randomless built into the simulation
+    they don't come out exactly the same. I chose to always use the lastest version so that the
+    line is continuous.
+    """
+    perm = ar.argsort(kind='stable')
+    aux = ar[perm]
+    mask = np.empty(aux.shape, dtype=bool)
+    mask[-1] = True
+    mask[:-1] = aux[:-1] != aux[1:]
+    return aux[mask], perm[mask]
+
+# Utils for working with multiple timeseries
+class TimeSeries:
+    def __init__(self, *args):
+        if len(args) == 1:
+            self.raw_ts = args[0].pop("ts").flatten()
+            self.raw_data = args[0]
+        elif len(args) == 2:
+            self.raw_ts = args[0]
+            self.raw_data = args[1]
+        else:
+            raise TypeError("__init__() requires either 1 or 2 positional aruments.")
+        self.ts, idxs = unique(self.raw_ts)
+        self.data = {k:self.raw_data[k][:, idxs] for k in self.raw_data}
+
+    def call_func(self, f):
+        result = {}
+        for k in self.data:
+            result[k] = f(self.data[k])
+        return result
+
+    def update_withfunc(self, f):
+        for k in self.data:
+            self.data[k] = f(self.data[k])
+
+    def __getitem__(self, var_str):
+        return self.data[var_str]
+
+    def save(self, filename="timeseries.npz"):
+        np.savez(ts=self.ts, **self.data)
+
+    def __iter__(self):
+        return iter(self.data.values())
+
+def load_fromfile(filename="timeseries.npz"):
+    data = dict(np.load(filename))
+    return TimeSeries(data)
+
+def convert_units(series):
+    series['B']  *= 1e9/q_over_m # nT
+    series['Bx'] *= 1e9/q_over_m # nT
+    series['E']  *= 1e6/q_over_m # micro V/m
+
+    mpkm = 1000
+    series['total']  /= mpkm**3 # m^-3
+    series['oxygen'] /= mpkm**3 # m^-3
+    series['barium'] /= mpkm**3 # m^-3
+    series['u']      *= mpkm    # m/s
+
+    return series
+
+def loadtimeseries_fromhybrid(specification):
+    name1, var1, mode1 = specification.pop()
+    ts1, arr1 = loadarray_fromhybrid(var1, mode1)
+    data_dict = {name1: arr1}
+    for name, var, mode in specification:
+        ts, arr = loadarray_fromhybrid(var, mode)
+        assert np.array_equal(ts1, ts)
+        data_dict[name] = arr
+
+    return convert_units(TimeSeries(ts1, data_dict))
+
+# Plotting utils
 def smootherator(arrs, n=3):
-    ret = np.empty_like(arrs)
-    for i, arr in enumerate(arrs):
-        ret[i,0] = (arr[0]+arr[1])/2
-        ret[i,1:-1] = np.convolve(arr, np.ones((n,))/n, mode='valid')
-        ret[i,-1] = (arr[-2] + arr[-1])/2
-    return ret
-def smootherator_inplace(arrs, n=3):
     ret = np.empty_like(arrs)
     for i, arr in enumerate(arrs):
         ret[i,0] = (arr[0]+arr[1])/2
@@ -57,15 +135,14 @@ def smootherator_inplace(arrs, n=3):
     arrs[:,:] = ret
     return arrs
 
-def plot_each(ax, ts, arrs):
-    for a, label in zip(arrs, ['-1000 m','-500 m','0 m','500 m','1000 m']):
-        ax.plot(ts, a, label=label)
-
-#######################################################################################################
 rc('text', usetex=True)
 q = 1.602e-19 # C
 m = 16*1.6726e-27 # kg
 q_over_m = q/m # C/kg
+
+def plot_each_line(ax, ts, arrs):
+    for a, label in zip(arrs, ['-1000 m','-500 m','0 m','500 m','1000 m']):
+        ax.plot(ts, a, label=label)
 
 def fig_axs_setup():
     fig, axs = plt.subplots(nrows=8, ncols=1, sharex=True, figsize=(8.5,11))
@@ -86,74 +163,43 @@ def fig_axs_setup():
 
     return fig, axs
 
-def plot_all(fig, axs, ts, timeseries_lst):
-    for ax, timeseries in zip(axs, timeseries_lst):
-        plot_each(ax, ts, timeseries)
+def plot_each_variable(fig, axs, series):
+    for ax, var in zip(axs, series):
+        plot_each_line(ax, series.ts, var)
 
     l = axs[2].legend(title='Approx Offset\n(+ upstream)', bbox_to_anchor=(1.001,1), loc='upper left', fontsize=10)
     plt.setp(l.get_title(), multialignment='center')
 
-    plt.show()
-
-def unique(ar):
-    """Similar to numpy.unique with return_index=True.
-    This function returns the unique values and last indices where a value occurs (rather than 
-    the first indices). There's no option to not return indices, just use np.unique in that case.
-    There's no option for inverse or counts, sorry.
-    """
-    perm = ar.argsort(kind='stable')
-    aux = ar[perm]
-    mask = np.empty(aux.shape, dtype=bool)
-    mask[-1] = True
-    mask[:-1] = aux[:-1] != aux[1:]
-    return aux[mask], perm[mask]
-
-def load_and_prep():
-    data = np.load("timeseries.npz")
-    ts = data["ts"]
-    total = data["total"]
-    oxygen = data["oxygen"]
-    barium = data["barium"]
-    B = data["B"]
-    Bx = data["Bx"]
-    u = data["u"]
-    E = data["E"]
-    T_i = data["T_i"]
-
-    ts = ts.reshape(len(ts))
-    ts,idxs = unique(ts)
-    total  = total[:, idxs]
-    oxygen = oxygen[:, idxs]
-    barium = barium[:, idxs]
-    B      = B[:, idxs]
-    Bx     = Bx[:, idxs]
-    u      = u[:, idxs]
-    E      = E[:, idxs]
-    T_i    = T_i[:, idxs]
-
-    smootherator_inplace(total)
-    smootherator_inplace(oxygen)
-    smootherator_inplace(barium)
-    smootherator_inplace(B)
-    smootherator_inplace(Bx)
-    smootherator_inplace(u)
-    smootherator_inplace(E)
-    smootherator_inplace(T_i)
-
-    # Units
-    B  *= 1e9/q_over_m # nT
-    Bx *= 1e9/q_over_m # nT
-    E  *= 1e6/q_over_m # micro V/m
-
-    mpkm = 1000
-    total  /= mpkm**3 # m^-3
-    oxygen /= mpkm**3 # m^-3
-    barium /= mpkm**3 # m^-3
-    u      *= mpkm    # m/s
-
-    return ts, total, oxygen, barium, B, Bx, u, E, T_i
+parser = argparse.ArgumentParser()
+parser.add_argument('loading', nargs='?', choices=('hybrid', 'npz'))
 
 if __name__ == "__main__":
+    args = parser.parse_args()
+    if args.loading is None:
+        if os.path.exists("timeseries.npz"):
+            args.loading = 'npz'
+        else:
+            args.loading = 'hybrid'
+
+    if args.loading == 'hybrid':
+        spec = [
+            ('total', 'np_tot', None),
+            ('oxygen', 'np_H', None),
+            ('barium', 'np_CH4', None),
+            ('B', 'bt', 'mag'),
+            ('Bx', 'bt', 'x'),
+            ('u', 'up', 'mag'),
+            ('E', 'E', 'mag'),
+            ('T_i', 'temp_p', None)
+        ]
+        series = loadtimeseries_fromhybrid(spec)
+        series.save()
+    else:
+        series = load_fromfile()
+
     fig, axs = fig_axs_setup()
-    ts, *timeseries_lst = load_and_prep()
-    plot_all(fig, axs, ts, timeseries_lst)
+    plot_each_variable(fig, axs, series)
+    plt.show()
+
+
+    
