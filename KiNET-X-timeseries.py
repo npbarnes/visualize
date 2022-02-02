@@ -171,17 +171,13 @@ def plot_each_variable(fig, axs, series):
     plt.setp(l.get_title(), multialignment='center')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('loading', nargs='?', choices=('hybrid', 'npz'))
+parser.add_argument('--load', nargs='?', choices=('hybrid', 'npz'), default='npz')
+parser.add_argument('--path', nargs=1, default='timeseries.npz')
+parser.add_argument('--no-show', dest='show', action='store_false')
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    if args.loading is None:
-        if os.path.exists("timeseries.npz"):
-            args.loading = 'npz'
-        else:
-            args.loading = 'hybrid'
-
-    if args.loading == 'hybrid':
+    if args.load == 'hybrid':
         spec = [
             ('total', 'np_tot', None),
             ('oxygen', 'np_H', None),
@@ -193,13 +189,14 @@ if __name__ == "__main__":
             ('T_i', 'temp_p', None)
         ]
         series = loadtimeseries_fromhybrid(spec)
-        series.save()
-    else:
-        series = load_fromfile()
+        series.save(args.path)
+    elif args.load == 'npz':
+        series = load_fromfile(args.path)
 
-    fig, axs = fig_axs_setup()
-    plot_each_variable(fig, axs, series)
-    plt.show()
+    if args.show:
+        fig, axs = fig_axs_setup()
+        plot_each_variable(fig, axs, series)
+        plt.show()
 
 
     
