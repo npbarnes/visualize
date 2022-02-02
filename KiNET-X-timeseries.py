@@ -92,6 +92,9 @@ class TimeSeries:
     def __getitem__(self, var_str):
         return self.data[var_str]
 
+    def __setitem__(self, key, val):
+        self.data[key] = val
+
     def save(self, filename="timeseries.npz"):
         np.savez(ts=self.ts, **self.data)
 
