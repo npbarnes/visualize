@@ -44,7 +44,7 @@ def loadarray_fromhybrid(var, mode):
     for m,data in step_iter(h):
         ts.append(h.para['dt']*m)
         ret_lst.append(point_selection(data, mode))
-    return ts, np.stack(ret_lst, axis=-1)
+    return np.asarray(ts), np.stack(ret_lst, axis=-1)
 
 def unique(ar):
     """Similar to numpy.unique with return_index=True.
@@ -57,6 +57,7 @@ def unique(ar):
     they don't come out exactly the same. I chose to always use the lastest version so that the
     line is continuous.
     """
+    ar = np.asanyarray(ar)
     perm = ar.argsort(kind='stable')
     aux = ar[perm]
     mask = np.empty(aux.shape, dtype=bool)
