@@ -96,7 +96,7 @@ class TimeSeries:
         self.data[key] = val
 
     def save(self, filename="timeseries.npz"):
-        np.savez(ts=self.ts, **self.data)
+        np.savez(filename, ts=self.ts, **self.data)
 
     def __iter__(self):
         return iter(self.data.values())
