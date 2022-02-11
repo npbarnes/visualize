@@ -67,7 +67,7 @@ class HybridReader2:
 
         self.representative_path = _find_nonempty(self.paths)
         if self.representative_path is None:
-            raise HybridError("All files appear to be empty")
+            raise HybridError(f"All {variable} files appear to be empty")
         self.representative = ff.FortranFile(self.representative_path, mode=mode)
         self.isScalar = self._check_scalar()
 
@@ -171,11 +171,18 @@ class HybridReader2:
         return m, data
 
     def get_timestep(self, n):
+        """
+        If n is positive, then load the n'th timestep. (i.e. one based indexing)
+        If n is negative, then count from the back. (i.e. n=-1 means load the last step saved)
+        if n is zero, then raise a ValueError.
+        """
         if n < 0:
             for h in self.real_handles:
                 h.seek(0, SEEK_END)
             for n in range(-n):
                 self.skip_back_timestep()
+        elif n == 0:
+            raise ValueError("step number must be positive or negative, not zero")
         else:
             # should we seek(0) first?
             for n in range(n-1):
@@ -212,6 +219,8 @@ class HybridReader2:
 
     def get_all_timesteps(self):
         """Return data from all timesteps and step numbers and physical times"""
+        for h in self.real_handles:
+            h.seek(0, SEEK_END)
         steps = self.get_saved_timesteps()
         nx = self.para['nx']
         ny = self.para['ny']
