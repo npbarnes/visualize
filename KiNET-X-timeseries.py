@@ -134,7 +134,7 @@ def loadtimeseries_fromhybrid(specification, zindex):
     ts1, arr1 = loadarray_fromhybrid(var1, mode1, zindex)
     data_dict = {name1: arr1}
     for name, var, mode in specification:
-        ts, arr = loadarray_fromhybrid(var, mode)
+        ts, arr = loadarray_fromhybrid(var, mode, zindex)
         assert np.array_equal(ts1, ts)
         data_dict[name] = arr
 
