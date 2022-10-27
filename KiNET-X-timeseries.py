@@ -179,7 +179,7 @@ parser.add_argument('--load', choices=('hybrid', 'npz'), default='npz')
 parser.add_argument('--path', default='timeseries.npz')
 parser.add_argument('--no-show', dest='show', action='store_false')
 
-if __name__ == "__main__":
+if __name__ == "lkjlj__main__":
     args = parser.parse_args()
     if args.load == 'hybrid':
         spec = [
