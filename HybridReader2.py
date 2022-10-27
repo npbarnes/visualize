@@ -67,7 +67,6 @@ class HybridReader2:
 
         self.representative_path = _find_nonempty(self.paths)
         if self.representative_path is None:
-            print(variable)
             raise HybridError(f"All {variable} files appear to be empty")
         self.representative = ff.FortranFile(self.representative_path, mode=mode)
         self.isScalar = self._check_scalar()
@@ -172,11 +171,18 @@ class HybridReader2:
         return m, data
 
     def get_timestep(self, n):
+        """
+        If n is positive, then load the n'th timestep. (i.e. one based indexing)
+        If n is negative, then count from the back. (i.e. n=-1 means load the last step saved)
+        if n is zero, then raise a ValueError.
+        """
         if n < 0:
             for h in self.real_handles:
                 h.seek(0, SEEK_END)
             for n in range(-n):
                 self.skip_back_timestep()
+        elif n == 0:
+            raise ValueError("step number must be positive or negative, not zero")
         else:
             # should we seek(0) first?
             for n in range(n-1):
@@ -206,26 +212,26 @@ class HybridReader2:
         """Returns time step number, time, and data for the last saved step of the simulation"""
         for h in self.real_handles:
             h.seek(0, SEEK_END)
-        m, data = self.get_prev_timestep()
-        for h in self.real_handles:
-            h.seek(0, SEEK_END)
-        return m, self.para['dt']*m, data
+        self.skip_back_timestep()
+        return self.get_next_timestep()
 
     def get_all_timesteps(self):
         """Return data from all timesteps and step numbers and physical times"""
-        steps = self.get_saved_timesteps()
+        for h in self.real_handles:
+            h.seek(0, SEEK_END)
         nx = self.para['nx']
         ny = self.para['ny']
         zrange = self.para['zrange']
 
+        ms = []
         ret_lst = []
-
         for n in range(len(steps)):
             m, data = self.get_next_timestep()
+            ms.append(m)
             ret_lst.append(data)
 
         ret = np.stack(ret_lst, axis=0)
-        return steps, np.array([self.para['dt']*m for m in steps]), ret
+        return np.array(ms), ret
     
     def repair_and_reset(self):
         for h in self.real_handles:

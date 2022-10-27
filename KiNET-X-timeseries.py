@@ -9,16 +9,16 @@ from HybridReader2 import step_iter
 import argparse
 
 # Load data at a few gridpoints as a timeseries
-def getbobs(data):
+def getbobs(data, zindex):
     s = data.shape
     nx,ny,nz = s[0],s[1],s[2]
     cx = nx//2
     cy = ny//2
     cz = nz//2
-    return data[(cx-2,cx-1,cx,cx+1,cx+2),cy,cz+5]
+    return data[(cx-2,cx-1,cx,cx+1,cx+2),cy,cz+zindex]
 
-def point_selection(data, mode):
-    b = getbobs(data)
+def point_selection(data, mode, zindex):
+    b = getbobs(data, zindex)
 
     if mode is None:
         return b.copy()
@@ -33,7 +33,7 @@ def point_selection(data, mode):
     else:
         raise ValueError("mode must be None, 'mag', 'x', 'y', or 'z'.")
 
-def loadarray_fromhybrid(var, mode):
+def loadarray_fromhybrid(var, mode, zindex):
     h = hr('data', var)
     if h.isScalar:
         assert mode is None
@@ -43,7 +43,7 @@ def loadarray_fromhybrid(var, mode):
     ts = []
     for m,data in step_iter(h):
         ts.append(h.para['dt']*m)
-        ret_lst.append(point_selection(data, mode))
+        ret_lst.append(point_selection(data, mode, zindex))
     return np.asarray(ts), np.stack(ret_lst, axis=-1)
 
 def unique(ar):
@@ -105,29 +105,40 @@ def load_fromfile(filename="timeseries.npz"):
     data = dict(np.load(filename))
     return TimeSeries(data)
 
-def convert_units(series):
-    series['B']  *= 1e9/q_over_m # nT
-    series['Bx'] *= 1e9/q_over_m # nT
-    series['E']  *= 1e6/q_over_m # micro V/m
-
+def convert_units(series, specification):
+    q = 1.602e-19 # C
+    m = 16*1.6726e-27 # kg
+    q_over_m = q/m # C/kg
     mpkm = 1000
-    series['total']  /= mpkm**3 # m^-3
-    series['oxygen'] /= mpkm**3 # m^-3
-    series['barium'] /= mpkm**3 # m^-3
-    series['u']      *= mpkm    # m/s
+
+    Bs = [name for name, var, _ in specification if var.startswith('bt')]
+    for B_name in Bs:
+        series[B_name] *= 1e9/q_over_m # nT
+
+    Es = [name for name, var, _ in specification if var == 'E']
+    for E_name in Es:
+        series[E_name] *= 1e6/q_over_m #micro V/m
+
+    ns = [name for name, var, _ in specification if var.startswith('np')]
+    for n_name in ns:
+        series[n_name] /= mpkm**3 # m^-3
+
+    us = [name for name, var, _ in specification if var.startswith('up')]
+    for u_name in us:
+        series[u_name] *= mpkm # m/s
 
     return series
 
-def loadtimeseries_fromhybrid(specification):
+def loadtimeseries_fromhybrid(specification, zindex):
     name1, var1, mode1 = specification.pop()
-    ts1, arr1 = loadarray_fromhybrid(var1, mode1)
+    ts1, arr1 = loadarray_fromhybrid(var1, mode1, zindex)
     data_dict = {name1: arr1}
     for name, var, mode in specification:
-        ts, arr = loadarray_fromhybrid(var, mode)
+        ts, arr = loadarray_fromhybrid(var, mode, zindex)
         assert np.array_equal(ts1, ts)
         data_dict[name] = arr
 
-    return convert_units(TimeSeries(ts1, data_dict))
+    return convert_units(TimeSeries(ts1, data_dict), specification)
 
 # Plotting utils
 def smootherator(arrs, n=3):
@@ -139,16 +150,26 @@ def smootherator(arrs, n=3):
     arrs[:,:] = ret
     return arrs
 
-rc('text', usetex=True)
-q = 1.602e-19 # C
-m = 16*1.6726e-27 # kg
-q_over_m = q/m # C/kg
+#rc('text', usetex=True)
 
 def plot_each_line(ax, ts, arrs):
     for a, label in zip(arrs, ['-1000 m','-500 m','0 m','500 m','1000 m']):
         ax.plot(ts, a, label=label)
 
-def fig_axs_setup():
+def fig_axs_setup_simple(spec):
+    fig, axs = plt.subplots(nrows=len(spec), ncols=1, sharex=True, figsize=(8.5,11))
+    fig.subplots_adjust(left=0.15, right=0.85, bottom=0.05, top=0.96, wspace=0, hspace=0.25)
+
+    axs[0].set_title('Plasma properties timeseries')
+
+    for ax, (name, _, _) in zip(axs, spec):
+        ax.set_ylabel(name)
+
+    axs[-1].set_xlabel('seconds since release')
+
+    return fig, axs
+
+def fig_axs_setup_fancy1():
     fig, axs = plt.subplots(nrows=8, ncols=1, sharex=True, figsize=(8.5,11))
     fig.subplots_adjust(left=0.15, right=0.85, bottom=0.05, top=0.96, wspace=0, hspace=0.25)
 
@@ -167,9 +188,9 @@ def fig_axs_setup():
 
     return fig, axs
 
-def plot_each_variable(fig, axs, series):
-    for ax, var in zip(axs, series):
-        plot_each_line(ax, series.ts, var)
+def plot_each_variable(fig, axs, spec, series):
+    for ax, (name, _, _) in zip(axs, spec):
+        plot_each_line(ax, series.ts, series[name])
 
     l = axs[2].legend(title='Approx Offset\n(+ upstream)', bbox_to_anchor=(1.001,1), loc='upper left', fontsize=10)
     plt.setp(l.get_title(), multialignment='center')
@@ -178,27 +199,40 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--load', choices=('hybrid', 'npz'), default='npz')
 parser.add_argument('--path', default='timeseries.npz')
 parser.add_argument('--no-show', dest='show', action='store_false')
+parser.add_argument('--zindex', type=int, default=5)
 
-if __name__ == "lkjlj__main__":
+if __name__ == "__main__":
+    spec = [
+        ('total', 'np_tot', None),
+        ('oxygen', 'np_H', None),
+        ('barium', 'np_CH4', None),
+        ('B', 'bt', 'mag'),
+        ('Bx', 'bt', 'x'),
+        ('u', 'up_tot', 'mag'),
+        ('E', 'E', 'mag'),
+        ('T_i', 'temp_p', None)
+    ]
+    spec = [
+        ('total', 'np_tot', None),
+        ('oxygen', 'np_H', None),
+        ('barium', 'np_CH4', None),
+        ('B', 'bt', 'mag'),
+        ('Bx', 'bt', 'x'),
+        ('u', 'up_tot', 'mag'),
+        ('Ex', 'E', 'x'),
+        ('Ey', 'E', 'y'),
+        ('Ez', 'E', 'z'),
+        ('T_i', 'temp_p', None)
+    ]
     args = parser.parse_args()
     if args.load == 'hybrid':
-        spec = [
-            ('total', 'np_tot', None),
-            ('oxygen', 'np_H', None),
-            ('barium', 'np_CH4', None),
-            ('B', 'bt', 'mag'),
-            ('Bx', 'bt', 'x'),
-            ('u', 'up', 'mag'),
-            ('E', 'E', 'mag'),
-            ('T_i', 'temp_p', None)
-        ]
-        series = loadtimeseries_fromhybrid(spec)
+        series = loadtimeseries_fromhybrid(spec, args.zindex)
         series.save(args.path)
     elif args.load == 'npz':
         series = load_fromfile(args.path)
 
     if args.show:
-        fig, axs = fig_axs_setup()
-        plot_each_variable(fig, axs, series)
+        fig, axs = fig_axs_setup_simple(spec)
+        plot_each_variable(fig, axs, spec, series)
         plt.show()
 
