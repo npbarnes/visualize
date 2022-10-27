@@ -67,7 +67,8 @@ class HybridReader2:
 
         self.representative_path = _find_nonempty(self.paths)
         if self.representative_path is None:
-            raise HybridError("All files appear to be empty")
+            print(variable)
+            raise HybridError(f"All {variable} files appear to be empty")
         self.representative = ff.FortranFile(self.representative_path, mode=mode)
         self.isScalar = self._check_scalar()
 
