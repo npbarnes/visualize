@@ -122,9 +122,6 @@ class HybridReader2:
 
     def _scalar_cut_overlap(self,a):
         return a[:-2*self.para['nx']*self.para['ny']]
-
-    def _vector_cut_overlap(self,a):
-        return a[:-2*self.para['nx']*self.para['ny']*3]
     ###################################################################################
 
     def get_saved_timesteps(self):
