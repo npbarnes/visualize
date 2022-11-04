@@ -139,7 +139,7 @@ class HybridReader2:
             except ff.NoMoreRecords:# Error indicates EOF
                 break
             f.skipRecord()# Skip the data record for this step
-            
+
         f.seek(start, SEEK_SET)
         return np.array(ms)
 
@@ -225,14 +225,17 @@ class HybridReader2:
 
         ms = []
         ret_lst = []
-        for n in range(len(steps)):
-            m, data = self.get_next_timestep()
+        while True:
+            try:
+                m, data = self.get_next_timestep()
+            except ff.NoMoreRecords:
+                break
             ms.append(m)
             ret_lst.append(data)
 
         ret = np.stack(ret_lst, axis=0)
         return np.array(ms), ret
-    
+
     def repair_and_reset(self):
         for h in self.real_handles:
             # Start at the begining
@@ -249,7 +252,7 @@ class HybridReader2:
                 h.truncate()
             # Finally, make sure we leave it at the begining
             h.seek(0, SEEK_SET)
-        
+
 
     def __del__(self):
         try:
@@ -301,4 +304,3 @@ def equal_spacing_step_iter(h):
         if m-prev_m == dm:
             yield m, data
         prev_m = m
-
