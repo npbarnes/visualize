@@ -215,7 +215,7 @@ class HybridReader2:
     def get_all_timesteps(self):
         """Return data from all timesteps and step numbers and physical times"""
         for h in self.real_handles:
-            h.seek(0, SEEK_END)
+            h.seek(0, SEEK_SET)
         nx = self.para['nx']
         ny = self.para['ny']
         zrange = self.para['zrange']
