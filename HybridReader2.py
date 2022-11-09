@@ -45,9 +45,7 @@ class NoSuchVariable(HybridError):
     pass
 
 class HybridReader2:
-    def __init__(self, prefix, variable, mode='r', double=False, force_version=None, proc_n=None):
-        if not (proc_n is None or (isinstance(proc_n, int) and proc_n >= 0)):
-            raise ValueError("proc_n must be either None or a non-negative integer")
+    def __init__(self, prefix, variable, mode='r', double=False, force_version=None, force_procs=None):
         self.doublereals = double
         self.mode = mode
 
@@ -68,16 +66,21 @@ class HybridReader2:
         if N == 0:
             raise NoSuchVariable(str(variable))
 
-        if proc_n is None:
+        if force_procs is None:
             self.paths = self.all_paths
-        elif N%2 == 1:
-            middle = N//2 + 1
-            middle_index = middle-1
-            self.paths = self.all_paths[middle_index-proc_n:middle_index+proc_n+1]
-        elif N%2 == 0:
-            lowermid = N//2
-            lowermid_index = lowermid-1
-            self.paths = self.all_paths[lowermid_index-(proc_n-1):lowermid_index+proc_n+1]
+        elif isinstance(force_procs, slice):
+            self.paths = self.all_paths[force_procs]
+        elif isinstance(force_procs, int):
+            if N%2 == 1:
+                middle = N//2 + 1
+                middle_index = middle-1
+                self.paths = self.all_paths[middle_index-force_procs:middle_index+force_procs+1]
+            else: # N%2 == 0:
+                lowermid = N//2
+                lowermid_index = lowermid-1
+                self.paths = self.all_paths[lowermid_index-(force_procs-1):lowermid_index+force_procs+1]
+        else:
+            raise ValueError("force_procs must be None, an integer, or a slice.")
         num_procs = len(self.paths)
 
         self.hp = HybridParams(prefix, force_version=force_version, force_numprocs=num_procs)
