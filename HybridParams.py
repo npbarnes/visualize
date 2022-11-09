@@ -14,19 +14,23 @@ class VersionError(ParameterReadError):
     pass
 
 class HybridParams:
-    def __init__(self,prefix, force_version=None):
+    def __init__(self,prefix, force_version=None, force_numprocs=None):
         self.prefix = prefix
         self.grid = join(prefix,'grid')
         self.particle = join(prefix,'particle')
         self.force_version = force_version
+        self.force_numprocs = force_numprocs
 
         self.para = self._getParameters()
 
     def num_procs(self):
         """Count how many density files were output to get the number of processors"""
-        filename_format_string = r'c\.np_3d_(\d+)\.dat'
-        rx = re.compile(filename_format_string)
-        return len( [f for f in listdir(self.grid) if rx.match(f)] )
+        if self.force_numprocs is None:
+            filename_format_string = r'c\.np_3d_(\d+)\.dat'
+            rx = re.compile(filename_format_string)
+            return len( [f for f in listdir(self.grid) if rx.match(f)] )
+        else:
+            return self.force_numprocs
 
     def _readPara(self):
         para = {}

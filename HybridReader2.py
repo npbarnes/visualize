@@ -45,7 +45,9 @@ class NoSuchVariable(HybridError):
     pass
 
 class HybridReader2:
-    def __init__(self, prefix, variable, mode='r', double=False, force_version=None, empty_is_zero=True):
+    def __init__(self, prefix, variable, mode='r', double=False, force_version=None, proc_n=None):
+        if not (proc_n is None or (isinstance(proc_n, int) and proc_n >= 0)):
+            raise ValueError("proc_n must be either None or a non-negative integer")
         self.doublereals = double
         self.mode = mode
 
@@ -54,16 +56,32 @@ class HybridReader2:
         else:
             self.real_prec = 'f'
 
+        self.grid = join(prefix,'grid')
+
         self.var = variable
-        self.hp = HybridParams(prefix, force_version=force_version)
-        self.para = self.hp.para
 
         self.filename_format_string = '^c\.{}_3d_(\d+)\.dat$'.format(self.var)
         self.rx = re.compile(self.filename_format_string)
 
-        self.paths = [join(self.hp.grid, f) for f in self.sort_filenames()]
-        if len(self.paths) == 0:
+        self.all_paths = [join(self.grid, f) for f in self.sort_filenames()]
+        N = len(self.all_paths)
+        if N == 0:
             raise NoSuchVariable(str(variable))
+
+        if proc_n is None:
+            self.paths = self.all_paths
+        elif N%2 == 1:
+            middle = N//2 + 1
+            middle_index = middle-1
+            self.paths = self.all_paths[middle_index-proc_n:middle_index+proc_n+1]
+        elif N%2 == 0:
+            lowermid = N//2
+            lowermid_index = lowermid-1
+            self.paths = self.all_paths[lowermid_index-(proc_n-1):lowermid_index+proc_n+1]
+        num_procs = len(self.paths)
+
+        self.hp = HybridParams(prefix, force_version=force_version, force_numprocs=num_procs)
+        self.para = self.hp.para
 
         self.representative_path = _find_nonempty(self.paths)
         if self.representative_path is None:
@@ -71,10 +89,11 @@ class HybridReader2:
         self.representative = ff.FortranFile(self.representative_path, mode=mode)
         self.isScalar = self._check_scalar()
 
-        self.handles = [] #[ff.FortranFile(p, mode=mode) for p in self.paths]
+        fake = FakeFortranFile(self.para['nx'], self.para['ny'], self.para['nz'], self.real_prec, self.isScalar)
+        self.handles = []
         for p in self.paths:
             if getsize(p) == 0:
-                self.handles.append(FakeFortranFile(self.para['nx'], self.para['ny'], self.para['nz'], self.real_prec, self.isScalar))
+                self.handles.append(fake)
             else:
                 self.handles.append(ff.FortranFile(p, mode=mode))
         self.real_handles = [h for h in self.handles if isinstance(h, ff.FortranFile)]
@@ -106,7 +125,7 @@ class HybridReader2:
 
 
     def filenames(self):
-        return [f for f in listdir(self.hp.grid) if self.rx.match(f)]
+        return [f for f in listdir(self.grid) if self.rx.match(f)]
 
     def _get_number(self, name):
         match = self.rx.search(name)
