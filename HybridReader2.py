@@ -240,7 +240,6 @@ class HybridReader2:
             h.seek(0, SEEK_SET)
         nx = self.para['nx']
         ny = self.para['ny']
-        zrange = self.para['zrange']
 
         ms = []
         ret_lst = []
