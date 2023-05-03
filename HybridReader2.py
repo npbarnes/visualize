@@ -78,7 +78,7 @@ class HybridReader2:
                 lowermid_index = lowermid-1
                 self.paths = self.all_paths[lowermid_index-(force_procs-1):lowermid_index+force_procs+1]
         else:
-            self.paths = [self.all_paths[i] for i in force_procs]
+            raise ValueError("force_procs must be None, or an integer.")
         num_procs = len(self.paths)
 
         self.hp = HybridParams(prefix, force_version=force_version, force_numprocs=num_procs)
