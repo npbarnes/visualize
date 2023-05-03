@@ -68,8 +68,6 @@ class HybridReader2:
 
         if force_procs is None:
             self.paths = self.all_paths
-        elif isinstance(force_procs, slice):
-            self.paths = self.all_paths[force_procs]
         elif isinstance(force_procs, int):
             if N%2 == 1:
                 middle = N//2 + 1
@@ -80,7 +78,7 @@ class HybridReader2:
                 lowermid_index = lowermid-1
                 self.paths = self.all_paths[lowermid_index-(force_procs-1):lowermid_index+force_procs+1]
         else:
-            raise ValueError("force_procs must be None, an integer, or a slice.")
+            self.paths = self.all_paths[force_procs]
         num_procs = len(self.paths)
 
         self.hp = HybridParams(prefix, force_version=force_version, force_numprocs=num_procs)
